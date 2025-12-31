@@ -55,76 +55,75 @@ function App() {
           {/* The Debate */}
           <div className="grid md:grid-cols-2 gap-4">
             <div className="bg-emerald-950/20 rounded-lg p-4 border border-emerald-900/30">
-              <p className="text-emerald-400 font-semibold mb-2">🟢 Optimistic View</p>
+              <p className="text-emerald-400 mb-2">🟢 Optimistic View</p>
               <p className="text-sm text-zinc-400">
-                "Compute is limited. Even if AI is cheaper per task, there's not enough compute to do <em>all</em> cognitive work. 
-                Humans will always have valuable niches—and demand for work will grow."
+                "Compute is limited. Even if AI is cheaper per task, there may not be enough compute to do all cognitive work. 
+                Humans could retain valuable niches."
               </p>
             </div>
             <div className="bg-red-950/20 rounded-lg p-4 border border-red-900/30">
-              <p className="text-red-400 font-semibold mb-2">🔴 Pessimistic View</p>
+              <p className="text-red-400 mb-2">🔴 Pessimistic View</p>
               <p className="text-sm text-zinc-400">
-                "AI is getting cheaper faster than compute is growing. Substitutability will approach 100% for most tasks. 
-                Human labor will be economically worthless within decades."
+                "AI is getting cheaper faster than compute is growing. If substitutability approaches 100%, 
+                human labor could lose most of its economic value."
               </p>
             </div>
           </div>
 
           {/* How the Model Works */}
           <div>
-            <h3 className="text-lg font-semibold text-zinc-100 mb-3">How the Model Works</h3>
+            <h3 className="text-lg text-zinc-100 mb-3">How the Model Works</h3>
             <div className="grid md:grid-cols-3 gap-4 text-sm">
               <div className="bg-zinc-900/50 rounded-lg p-4 border border-zinc-800">
-                <p className="text-amber-400 font-semibold mb-2">1. Supply</p>
+                <p className="text-amber-400 mb-2">1. Supply</p>
                 <p className="text-zinc-400">
-                  Global AI compute grows exponentially but with slowdown. Algorithmic efficiency multiplies effective capacity.
+                  Global AI compute grows over time. Algorithmic efficiency multiplies effective capacity.
                 </p>
               </div>
               <div className="bg-zinc-900/50 rounded-lg p-4 border border-zinc-800">
-                <p className="text-amber-400 font-semibold mb-2">2. Demand</p>
+                <p className="text-amber-400 mb-2">2. Demand</p>
                 <p className="text-zinc-400">
-                  Cognitive work is split into 5 tiers (Routine → Frontier). AI is cheaper for easy tasks, expensive for hard ones.
+                  Cognitive work is split into 5 tiers (Routine → Frontier). AI costs vary by task difficulty.
                 </p>
               </div>
               <div className="bg-zinc-900/50 rounded-lg p-4 border border-zinc-800">
-                <p className="text-amber-400 font-semibold mb-2">3. Substitution</p>
+                <p className="text-amber-400 mb-2">3. Substitution</p>
                 <p className="text-zinc-400">
-                  <strong>σ (substitutability)</strong> limits how much AI can replace humans—even when cheaper. This is the key uncertainty.
+                  σ (substitutability) limits how much AI can replace humans—even when cheaper.
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Key Insight */}
+          {/* What to Explore */}
           <div className="bg-indigo-950/30 rounded-lg p-4 border border-indigo-900/40">
-            <p className="text-indigo-300 font-semibold mb-2">💡 Key Insight</p>
+            <p className="text-indigo-300 mb-2">🔍 What to Explore</p>
             <p className="text-sm text-zinc-400">
-              With realistic 2024 numbers, <strong className="text-zinc-200">compute is NOT the bottleneck</strong>—substitutability (σ) is. 
-              The model shows AI cost falls dramatically, but if σ stays low (AI can't fully replace humans), human labor retains value. 
-              The debate is really about <strong className="text-zinc-200">how fast σ grows</strong> and whether it asymptotes below 100%.
+              The model suggests that with current defaults, substitutability (σ) may matter more than raw compute availability—but 
+              this depends heavily on your assumptions. Try adjusting parameters to see which factors dominate under different scenarios.
             </p>
           </div>
 
           {/* How to Use */}
           <div>
-            <h3 className="text-lg font-semibold text-zinc-100 mb-3">How to Use This Tool</h3>
+            <h3 className="text-lg text-zinc-100 mb-3">How to Use This Tool</h3>
             <div className="grid md:grid-cols-2 gap-4 text-sm">
               <div className="space-y-2">
-                <p className="text-zinc-300 font-medium">🎛️ Adjust Parameters (left sidebar)</p>
+                <p className="text-zinc-300">🎛️ Adjust Parameters (left sidebar)</p>
                 <ul className="list-disc list-inside text-zinc-400 space-y-1 ml-2">
-                  <li><strong>Compute:</strong> Base capacity, growth rate, efficiency gains</li>
-                  <li><strong>Demand:</strong> Elasticity (Jevons paradox), new task creation</li>
-                  <li><strong>Costs:</strong> $/exaFLOP, human wage floor</li>
-                  <li><strong>Tiers:</strong> Per-tier σ, FLOPs, human capability</li>
+                  <li>Compute: Base capacity, growth rate, efficiency gains</li>
+                  <li>Demand: Elasticity, new task creation</li>
+                  <li>Costs: $/exaFLOP, human wage floor</li>
+                  <li>Tiers: Per-tier σ, FLOPs, human capability</li>
                 </ul>
               </div>
               <div className="space-y-2">
-                <p className="text-zinc-300 font-medium">📊 Explore Results (tabs above)</p>
+                <p className="text-zinc-300">📊 Explore Results (tabs above)</p>
                 <ul className="list-disc list-inside text-zinc-400 space-y-1 ml-2">
-                  <li><strong>Summary:</strong> Key metrics for selected year</li>
-                  <li><strong>Task Tiers:</strong> Per-tier breakdown of AI vs human work</li>
-                  <li><strong>Charts:</strong> Time series of all model outputs</li>
-                  <li><strong>Model Info:</strong> Parameter sources and methodology</li>
+                  <li>Summary: Key metrics for selected year</li>
+                  <li>Task Tiers: Per-tier breakdown of AI vs human work</li>
+                  <li>Charts: Time series of all model outputs</li>
+                  <li>Model Info: Parameter sources and methodology</li>
                 </ul>
               </div>
             </div>
@@ -132,19 +131,19 @@ function App() {
 
           {/* Quick Experiments */}
           <div className="border-t border-zinc-800 pt-4">
-            <p className="text-zinc-300 font-medium mb-3">🧪 Try These Experiments</p>
+            <p className="text-zinc-300 mb-3">🧪 Try These Experiments</p>
             <div className="grid md:grid-cols-3 gap-3 text-xs">
               <div className="bg-zinc-900/50 rounded p-3 border border-zinc-800">
-                <p className="text-emerald-400 font-medium">Optimist scenario</p>
-                <p className="text-zinc-500">Set σ max to 0.6 for all tiers. Watch human share stay high even in 2050.</p>
+                <p className="text-emerald-400">Optimist scenario</p>
+                <p className="text-zinc-500">Set σ max to 0.6 for all tiers.</p>
               </div>
               <div className="bg-zinc-900/50 rounded p-3 border border-zinc-800">
-                <p className="text-red-400 font-medium">Pessimist scenario</p>
-                <p className="text-zinc-500">Set σ max to 0.99, half-life to 3 years. Watch human wages collapse.</p>
+                <p className="text-red-400">Pessimist scenario</p>
+                <p className="text-zinc-500">Set σ max to 0.99, half-life to 3 years.</p>
               </div>
               <div className="bg-zinc-900/50 rounded p-3 border border-zinc-800">
-                <p className="text-amber-400 font-medium">Compute-constrained</p>
-                <p className="text-zinc-500">Lower base compute to 10^20, raise tier FLOPs. See compute become binding.</p>
+                <p className="text-amber-400">Compute-constrained</p>
+                <p className="text-zinc-500">Lower base compute to 10^20, raise tier FLOPs.</p>
               </div>
             </div>
           </div>
