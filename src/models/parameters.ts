@@ -37,19 +37,19 @@ export interface TierConfig {
 export const TIER_CONFIGS: TierConfig[] = [
   // Routine: most workers can do, lowest wages, fast AI progress
   { id: 'routine', name: 'Routine', color: '#22c55e', defaultFlops: 12, defaultShare: 0.25, 
-    initialSigma: 0.50, maxSigma: 1, sigmaHalfLife: 2.5, 
+    initialSigma: 0.10, maxSigma: 1, sigmaHalfLife: 3, 
     humanCapable: 0.90, wageMultiplier: 1.0, 
     taskValue: 30, wageElasticity: 0.3,
     description: 'Email drafts, simple lookups, form filling' },
   // Standard: many workers can do, modest wage premium
   { id: 'standard', name: 'Standard', color: '#3b82f6', defaultFlops: 14, defaultShare: 0.35, 
-    initialSigma: 0.30, maxSigma: 0.98, sigmaHalfLife: 4, 
+    initialSigma: 0.10, maxSigma: 0.98, sigmaHalfLife: 4, 
     humanCapable: 0.65, wageMultiplier: 1.5,
     taskValue: 60, wageElasticity: 0.5,
     description: 'Document summarization, code review, data analysis' },
   // Complex: fewer workers, higher wages, slower AI progress
   { id: 'complex', name: 'Complex', color: '#a855f7', defaultFlops: 16, defaultShare: 0.25, 
-    initialSigma: 0.15, maxSigma: 0.95, sigmaHalfLife: 4, 
+    initialSigma: 0.05, maxSigma: 0.95, sigmaHalfLife: 5, 
     humanCapable: 0.35, wageMultiplier: 2.5,
     taskValue: 150, wageElasticity: 0.8,
     description: 'Multi-step research, strategic planning' },
@@ -61,7 +61,7 @@ export const TIER_CONFIGS: TierConfig[] = [
     description: 'Novel research, high-stakes decisions' },
   // Frontier: very rare workers, very high wages, slowest AI progress
   { id: 'frontier', name: 'Frontier', color: '#ef4444', defaultFlops: 20, defaultShare: 0.03, 
-    initialSigma: 0.02, maxSigma: 0.80, sigmaHalfLife: 5, 
+    initialSigma: 0.02, maxSigma: 0.80, sigmaHalfLife: 6, 
     humanCapable: 0.03, wageMultiplier: 10.0,
     taskValue: 1000, wageElasticity: 1.5,
     description: 'Breakthrough innovation, trust-critical' },
