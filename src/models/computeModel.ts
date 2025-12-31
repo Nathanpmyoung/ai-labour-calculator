@@ -199,37 +199,83 @@ function calculateTierSubstitutability(
 
 /**
  * Calculate the total available compute for a given year
+ * Supports declining growth rates to model Moore's Law slowdown
  */
 function calculateTotalCompute(
   baseComputeExponent: number,
   computeGrowthRate: number,
-  yearsFromBase: number
+  yearsFromBase: number,
+  growthDecay: number = 0
 ): number {
   const baseCompute = Math.pow(10, baseComputeExponent);
-  return baseCompute * Math.pow(1 + computeGrowthRate, yearsFromBase);
+  
+  if (growthDecay === 0 || yearsFromBase === 0) {
+    // Original behavior - constant growth rate
+    return baseCompute * Math.pow(1 + computeGrowthRate, yearsFromBase);
+  }
+  
+  // Compound declining growth iteratively
+  // rate(year) = initialRate × (1 - decay)^year
+  let multiplier = 1;
+  for (let y = 0; y < yearsFromBase; y++) {
+    const yearRate = computeGrowthRate * Math.pow(1 - growthDecay, y);
+    multiplier *= (1 + yearRate);
+  }
+  return baseCompute * multiplier;
 }
 
 /**
  * Calculate effective compute (adjusted for algorithmic improvements)
+ * Supports declining efficiency gains to model diminishing returns
  */
 function calculateEffectiveCompute(
   totalCompute: number,
   efficiencyImprovement: number,
-  yearsFromBase: number
+  yearsFromBase: number,
+  efficiencyDecay: number = 0
 ): number {
-  return totalCompute * Math.pow(efficiencyImprovement, yearsFromBase);
+  if (efficiencyDecay === 0 || yearsFromBase === 0) {
+    // Original behavior - constant efficiency multiplier
+    return totalCompute * Math.pow(efficiencyImprovement, yearsFromBase);
+  }
+  
+  // Compound declining efficiency gains iteratively
+  // For efficiency, the improvement factor decays: factor(year) = initialFactor^((1-decay)^year)
+  // This is equivalent to multiplying by a declining factor each year
+  let multiplier = 1;
+  for (let y = 0; y < yearsFromBase; y++) {
+    // Decay the log of the improvement factor (so 2x becomes closer to 1x over time)
+    const effectiveFactor = Math.pow(efficiencyImprovement, Math.pow(1 - efficiencyDecay, y));
+    multiplier *= effectiveFactor;
+  }
+  return totalCompute * multiplier;
 }
 
 /**
  * Calculate cost per exaFLOP for a given year
+ * Supports declining cost decline rate to model optimization plateaus
  */
 function calculateComputeCost(
   baseCostExponent: number,
   costDeclineRate: number,
-  yearsFromBase: number
+  yearsFromBase: number,
+  costDeclineDecay: number = 0
 ): number {
   const baseCost = Math.pow(10, baseCostExponent);
-  return baseCost * Math.pow(1 - costDeclineRate, yearsFromBase);
+  
+  if (costDeclineDecay === 0 || yearsFromBase === 0) {
+    // Original behavior - constant decline rate
+    return baseCost * Math.pow(1 - costDeclineRate, yearsFromBase);
+  }
+  
+  // Compound declining cost decline iteratively
+  // rate(year) = initialRate × (1 - decay)^year
+  let multiplier = 1;
+  for (let y = 0; y < yearsFromBase; y++) {
+    const yearDeclineRate = costDeclineRate * Math.pow(1 - costDeclineDecay, y);
+    multiplier *= (1 - yearDeclineRate);
+  }
+  return baseCost * multiplier;
 }
 
 /**
@@ -702,27 +748,40 @@ export function runModel(params: ParameterValues): ModelOutputs {
     const averageSubstitutability = taskTiers.reduce((sum, tier, i) => 
       sum + tierSigmaArray[i] * tier.shareOfCognitive, 0);
     
-    // Calculate compute metrics
+    // Calculate compute metrics (with optional declining growth rates)
     const totalComputeFlops = calculateTotalCompute(
       params.baseComputeExponent,
       params.computeGrowthRate,
-      yearsFromBase
+      yearsFromBase,
+      params.computeGrowthDecay ?? 0
     );
     
     const effectiveComputeFlops = calculateEffectiveCompute(
       totalComputeFlops,
       params.efficiencyImprovement,
-      yearsFromBase
+      yearsFromBase,
+      params.efficiencyDecay ?? 0
     );
     
     const computeCostPerExaflop = calculateComputeCost(
       params.computeCostExponent,
       params.costDeclineRate,
-      yearsFromBase
+      yearsFromBase,
+      params.costDeclineDecay ?? 0
     );
     
-    // Efficiency multiplier for reducing FLOPs needed
-    const efficiencyMultiplier = Math.pow(params.efficiencyImprovement, yearsFromBase);
+    // Efficiency multiplier for reducing FLOPs needed (with decay)
+    // Use same decay logic as calculateEffectiveCompute
+    let efficiencyMultiplier = 1;
+    const efficiencyDecay = params.efficiencyDecay ?? 0;
+    if (efficiencyDecay === 0 || yearsFromBase === 0) {
+      efficiencyMultiplier = Math.pow(params.efficiencyImprovement, yearsFromBase);
+    } else {
+      for (let y = 0; y < yearsFromBase; y++) {
+        const effectiveFactor = Math.pow(params.efficiencyImprovement, Math.pow(1 - efficiencyDecay, y));
+        efficiencyMultiplier *= effectiveFactor;
+      }
+    }
     
     // Calculate AI cost reduction for demand elasticity
     // This combines cost decline + efficiency improvement

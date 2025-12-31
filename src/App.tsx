@@ -195,6 +195,31 @@ function App() {
                 </ul>
               </div>
             </div>
+            
+            {/* Declining Growth Rates - NEW */}
+            <div className="pt-4 border-t border-zinc-800 mt-4 text-xs text-zinc-500">
+              <h4 className="text-zinc-400 font-medium mb-2">Declining Growth Rates — Why Exponentials Can't Last</h4>
+              <p className="mb-2">
+                Perpetual exponential growth is unrealistic. Moore's Law is slowing, algorithmic breakthroughs get harder as 
+                low-hanging fruit is picked, and cost optimizations plateau. The model supports <strong className="text-amber-400">declining growth rates</strong>:
+              </p>
+              <div className="bg-zinc-800/50 rounded p-2 my-2 font-mono text-xs">
+                rate(year) = initialRate × (1 - decay)^years
+              </div>
+              <p className="mb-2">
+                <strong>Example:</strong> 100%/year compute growth with 5% decay:
+                Year 1: +100% → Year 5: +77% → Year 10: +60% → Year 20: +36%.
+                By 2044, compute is ~150× (not 1,000×) of 2024.
+              </p>
+              <ul className="space-y-1 list-disc list-inside ml-1">
+                <li><strong className="text-zinc-300">Compute Growth Slowdown (5%)</strong> — Hardware scaling gets harder each generation</li>
+                <li><strong className="text-zinc-300">Efficiency Gain Slowdown (8%)</strong> — Algorithmic improvements have diminishing returns faster</li>
+                <li><strong className="text-zinc-300">Cost Decline Slowdown (5%)</strong> — Manufacturing optimizations plateau</li>
+              </ul>
+              <p className="mt-2 text-amber-400/80">
+                Set all decay params to 0 to restore constant exponential growth (original behavior).
+              </p>
+            </div>
             <div className="pt-4 border-t border-zinc-800 mt-4 text-xs text-zinc-500">
               <h4 className="text-zinc-400 font-medium mb-2">Substitutability (σ) — Per-Tier Growth</h4>
               <p>
