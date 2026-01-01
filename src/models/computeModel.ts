@@ -24,14 +24,6 @@ import solver from 'javascript-lp-solver';
  * but we keep these types/import around for potential future work and backwards
  * compatibility with older experiments.
  */
-interface LPModel {
-  optimize: string;
-  opType: 'max' | 'min';
-  constraints: Record<string, { max?: number; min?: number; equal?: number }>;
-  variables: Record<string, Record<string, number>>;
-  ints?: Record<string, number>;
-}
-
 interface LPResult {
   feasible: boolean;
   result: number;
