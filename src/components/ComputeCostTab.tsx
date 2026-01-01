@@ -165,7 +165,7 @@ export function ComputeCostTab({ projection, params }: ComputeCostTabProps) {
               />
               <YAxis type="category" dataKey="name" tick={{ fill: '#a1a1aa' }} />
               <Tooltip 
-                formatter={(value: number) => formatCurrency(value)}
+                formatter={(value) => formatCurrency(value as number)}
                 contentStyle={{ backgroundColor: '#18181b', border: '1px solid #3f3f46' }}
               />
               <Legend />
