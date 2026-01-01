@@ -27,9 +27,17 @@ export function SummaryPanel({ outputs, params }: SummaryPanelProps) {
   const baselineHumanHours = baseline2024?.totalHumanHours ?? targetProjection.totalHumanHours;
   const humanHoursChange = ((targetProjection.totalHumanHours - baselineHumanHours) / baselineHumanHours) * 100;
   
-  // Calculate average AI cost across tiers
+  // Calculate average AI cost across tiers (market price)
   const avgAICost = targetProjection.tierAllocations.reduce((sum, ta) => 
     sum + ta.aiCostPerHour * ta.tier.shareOfCognitive, 0);
+  
+  // Calculate average production cost (hardware only)
+  const avgProductionCost = targetProjection.tierAllocations.reduce((sum, ta) => 
+    sum + ta.productionCostPerHour * ta.tier.shareOfCognitive, 0);
+  
+  // Scarcity premium from model
+  const scarcityPremium = targetProjection.scarcityPremium;
+  const hasScarcityPremium = scarcityPremium > 1.01; // More than 1% premium
   
   // Format hours
   const formatHours = (n: number): string => {
@@ -95,11 +103,19 @@ export function SummaryPanel({ outputs, params }: SummaryPanelProps) {
         
         <div className="p-4 bg-zinc-900/50 rounded-lg">
           <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">
-            Avg AI Cost/Hour
+            Avg AI Cost/Hour {hasScarcityPremium && <span className="text-amber-500">(Market)</span>}
           </p>
           <p className="text-xl font-semibold text-amber-400">
             {formatCurrency(avgAICost)}
           </p>
+          {hasScarcityPremium && (
+            <p className="text-xs text-zinc-500 mt-1">
+              Base: {formatCurrency(avgProductionCost)} 
+              <span className="text-amber-500 ml-1">
+                ({scarcityPremium.toFixed(1)}× premium)
+              </span>
+            </p>
+          )}
         </div>
         
         <div className="p-4 bg-zinc-900/50 rounded-lg">
@@ -112,6 +128,28 @@ export function SummaryPanel({ outputs, params }: SummaryPanelProps) {
         </div>
       </div>
       
+      {/* Scarcity premium alert */}
+      {hasScarcityPremium && (
+        <div className="mb-5 p-3 bg-amber-950/30 border border-amber-900/50 rounded-lg">
+          <div className="flex items-center justify-between">
+            <span className="text-xs uppercase tracking-wider text-amber-400">
+              ⚡ Compute Scarcity Premium
+            </span>
+            <span className="text-sm font-semibold text-amber-300">
+              {scarcityPremium.toFixed(1)}× base cost
+            </span>
+          </div>
+          <p className="text-xs text-zinc-400 mt-2">
+            Demand exceeds supply—compute market price has risen above production cost.
+            {targetProjection.clearingTier && (
+              <span className="text-amber-400 ml-1">
+                Price set by {targetProjection.clearingTier} tier (marginal buyer).
+              </span>
+            )}
+          </p>
+        </div>
+      )}
+      
       {/* Employment & wage breakdown */}
       <div className="mb-5 p-4 bg-zinc-900/50 border border-zinc-800 rounded-lg">
         <h4 className="text-xs uppercase tracking-wider text-zinc-500 mb-3">
@@ -121,14 +159,15 @@ export function SummaryPanel({ outputs, params }: SummaryPanelProps) {
         <div className="flex items-center gap-2 text-[10px] text-zinc-600 mb-2 border-b border-zinc-800 pb-1">
           <span className="w-2"></span>
           <span className="w-14">Tier</span>
-          <span className="w-18">Wage</span>
-          <span className="w-10" title="Labor market tightness: demand ÷ supply. >1 means shortage.">Tight</span>
+          <span className="w-16" title="Human equilibrium wage for this tier">Wage</span>
+          <span className="w-16" title="AI cost per hour for this tier">AI $/hr</span>
           <span className="w-14" title="Full-time equivalent jobs (2000 hrs/year)">Jobs</span>
           <span className="ml-auto" title="% of tier's work done by humans">Human</span>
         </div>
         <div className="space-y-2">
           {targetProjection.tierAllocations.map((ta) => {
             const ftes = ta.hoursHuman / 2000; // ~2000 hrs/year per FTE
+            const aiCheaper = ta.aiCostPerHour < ta.tierWage;
             return (
               <div key={ta.tier.id} className="flex items-center gap-2 text-xs">
                 <div 
@@ -136,12 +175,13 @@ export function SummaryPanel({ outputs, params }: SummaryPanelProps) {
                   style={{ backgroundColor: ta.tier.color }}
                 />
                 <span className="text-zinc-400 w-14">{ta.tier.name}</span>
-                <span className={`w-18 ${ta.wageAtCeiling ? 'text-amber-400' : 'text-emerald-400'}`}>
-                  {formatCurrency(ta.tierWage)}/hr
+                <span className={`w-16 ${ta.wageAtCeiling ? 'text-amber-400' : 'text-emerald-400'}`}>
+                  {formatCurrency(ta.tierWage)}
                   {ta.wageAtCeiling && <span className="ml-0.5" title="Wage hit task value ceiling">⚠</span>}
                 </span>
-                <span className="text-zinc-500 w-10" title={`Demand ${ta.laborTightness > 1 ? '>' : '<'} supply`}>
-                  {ta.laborTightness.toFixed(1)}×
+                <span className={`w-16 ${aiCheaper ? 'text-amber-400' : 'text-red-400'}`} title={aiCheaper ? 'AI is cheaper' : 'AI is more expensive than humans'}>
+                  {formatCurrency(ta.aiCostPerHour)}
+                  {!aiCheaper && <span className="ml-0.5">⬆</span>}
                 </span>
                 <span className="text-zinc-300 w-14">
                   {ftes >= 1e9 ? `${(ftes/1e9).toFixed(1)}B` : ftes >= 1e6 ? `${(ftes/1e6).toFixed(0)}M` : `${(ftes/1e3).toFixed(0)}K`}
@@ -184,6 +224,27 @@ export function SummaryPanel({ outputs, params }: SummaryPanelProps) {
           </div>
         </div>
       </div>
+      
+      {/* Unmet demand warning */}
+      {targetProjection.totalUnmetHours > 0 && (
+        <div className="mb-5 p-3 bg-red-950/30 border border-red-900/50 rounded-lg">
+          <div className="flex items-center justify-between">
+            <span className="text-xs uppercase tracking-wider text-red-400">
+              ⚠️ Unmet Demand
+            </span>
+            <span className="text-sm font-semibold text-red-300">
+              {formatHours(targetProjection.totalUnmetHours)} hrs/yr
+              <span className="text-red-500 ml-2">
+                ({(targetProjection.unmetTaskShare * 100).toFixed(1)}% of demand)
+              </span>
+            </span>
+          </div>
+          <p className="text-xs text-zinc-400 mt-2">
+            This work couldn't be done: human capacity was exhausted AND AI was too expensive.
+            Wages are at ceiling for affected tiers.
+          </p>
+        </div>
+      )}
       
       {/* Tier breakdown compact */}
       <div className="mb-5 pb-5 border-b border-zinc-800">

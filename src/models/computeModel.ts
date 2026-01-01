@@ -114,16 +114,19 @@ export const DEFAULT_TASK_TIERS: TaskTier[] = TIER_CONFIGS.map(config => ({
  */
 export interface TierAllocation {
   tier: TaskTier;
-  aiCostPerHour: number;       // Cost for AI to do 1 hour of this tier's work
+  aiCostPerHour: number;       // MARKET cost for AI to do 1 hour (includes scarcity premium)
+  productionCostPerHour: number; // BASE cost (hardware/energy only, no scarcity)
   aiShare: number;             // Fraction of this tier done by AI
   humanShare: number;          // Fraction done by humans
   effectiveSubstitutability: number; // σ for this tier this year
   bindingConstraint: 'cost' | 'compute' | 'substitutability' | 'humanCapacity';
   hoursAI: number;             // Total hours done by AI
   hoursHuman: number;          // Total hours done by humans
+  hoursUnmet: number;          // Demanded hours that couldn't be supplied (humans capped, AI too expensive)
   computeUsed: number;         // FLOPs used for this tier
   tierWage: number;            // Equilibrium wage for this tier ($/hr)
   humanCapacityHours: number;  // Max hours humans can supply for this tier (base capacity)
+  reservationPrice: number;    // Max $/FLOP this tier would pay (willingness to pay)
   // Equilibrium wage dynamics
   effectiveSupply: number;     // Base capacity + displaced workers from above
   laborTightness: number;      // Demand / effective supply ratio
@@ -149,9 +152,11 @@ export interface YearlyProjection {
   // Aggregated metrics
   aiTaskShare: number;               // Overall fraction of cognitive tasks done by AI
   humanTaskShare: number;            // Overall fraction done by humans
+  unmetTaskShare: number;            // Fraction of demand that couldn't be met
   humanWageEquilibrium: number;      // Weighted equilibrium wage for humans
   totalAIHours: number;              // Absolute hours done by AI
   totalHumanHours: number;           // Absolute hours done by humans
+  totalUnmetHours: number;           // Hours demanded but not supplied (humans capped, AI too expensive)
   
   // Per-tier breakdown
   tierAllocations: TierAllocation[];
@@ -162,6 +167,12 @@ export interface YearlyProjection {
   // Constraint analysis
   primaryBindingConstraint: 'cost' | 'compute' | 'substitutability' | 'humanCapacity';
   computeUtilization: number;        // What % of available compute is used
+  
+  // Market pricing
+  productionCostPerFLOP: number;     // Base cost (hardware/energy)
+  marketPricePerFLOP: number;        // Market clearing price (>= production cost)
+  scarcityPremium: number;           // marketPrice / productionCost ratio (1.0 = no premium)
+  clearingTier: string | null;       // Which tier set the clearing price (null if compute abundant)
 }
 
 export interface ModelOutputs {
@@ -330,19 +341,6 @@ function calculateCognitiveWorkDemand(
   };
 }
 
-/**
- * Calculate AI cost per hour for a specific tier
- */
-function calculateAiCostPerHourForTier(
-  flopsPerHourExponent: number,
-  costPerExaflop: number,
-  efficiencyMultiplier: number  // Efficiency improvements reduce effective FLOPs needed
-): number {
-  const flopsPerHour = Math.pow(10, flopsPerHourExponent) / efficiencyMultiplier;
-  const exaflopsPerHour = flopsPerHour / 1e18;
-  return exaflopsPerHour * costPerExaflop;
-}
-
 // Constants for compute allocation
 const SECONDS_PER_YEAR = 365.25 * 24 * 3600;
 const AI_UTILIZATION = 0.3; // Fraction of compute capacity used for cognitive work
@@ -480,24 +478,36 @@ interface TierValueInfo {
   tier: TaskTier;
   tierIndex: number;
   tierWage: number;            // Wage for this tier (base × multiplier)
-  aiCostPerHour: number;       // Cost for AI to do 1 hour
+  productionCostPerHour: number; // Base AI cost (hardware/energy only)
   flopsPerHour: number;        // After efficiency adjustment
   valuePerFlop: number;        // = tierWage / flopsPerHour
+  reservationPricePerFLOP: number; // Max $/FLOP willing to pay = min(tierWage, taskValue) / flopsPerHour
   effectiveSigma: number;      // Effective substitutability for this tier
   tierHours: number;           // Total hours of work in this tier
   maxAIHours: number;          // Limited by substitutability
   maxComputeNeeded: number;    // FLOPs to max out this tier
-  isCostEffective: boolean;    // Is AI cheaper than tier wage?
   humanCapacityHours: number;  // Max hours humans can supply for this tier
 }
 
+interface AllocationResult {
+  allocations: TierAllocation[];
+  marketPricePerFLOP: number;     // Clearing price (scarcity-adjusted)
+  productionCostPerFLOP: number;  // Base hardware cost
+  scarcityPremium: number;        // market / production ratio
+  clearingTier: string | null;    // Which tier set the price
+}
+
 /**
- * Optimally allocate compute across tiers using value-per-FLOP ordering
+ * Optimally allocate compute across tiers using MARKET CLEARING approach
  * 
- * Now also considers:
+ * Key insight: When compute is scarce, price rises above production cost.
+ * Tiers bid for compute based on their "reservation price" (max willingness to pay).
+ * Highest-value uses get compute first; clearing price is set by marginal tier.
+ * 
+ * Also considers:
  * - Human capacity constraints (not everyone can do expert work)
  * - Per-tier wages (harder tiers pay more)
- * - Human capacity binding (when humans can't supply enough workers)
+ * - Substitutability limits (σ caps AI share)
  */
 function allocateComputeOptimally(
   tiers: TaskTier[],
@@ -508,27 +518,30 @@ function allocateComputeOptimally(
   costPerExaflop: number,
   humanWageFloor: number,
   totalWorkforceHours: number   // Total human cognitive work hours available
-): TierAllocation[] {
-  // 1. Calculate value info for each tier
+): AllocationResult {
+  // Base production cost per FLOP (hardware/energy only)
+  const productionCostPerFLOP = costPerExaflop / 1e18;
+  
+  // 1. Calculate value info for each tier, including reservation prices
   const tierValues: TierValueInfo[] = tiers.map((tier, i) => {
     // Per-tier wage based on the tier's wage multiplier
     const tierWage = humanWageFloor * tier.wageMultiplier;
     
     const effectiveFlopsPerHour = Math.pow(10, tier.flopsPerHourExponent) / efficiencyMultiplier;
-    const aiCostPerHour = calculateAiCostPerHourForTier(
-      tier.flopsPerHourExponent,
-      costPerExaflop,
-      efficiencyMultiplier
-    );
+    const productionCostPerHour = productionCostPerFLOP * effectiveFlopsPerHour;
     
     const effectiveSigma = tierSigmaArray[i]; // Use per-tier σ
     const tierHours = tierHoursArray[i];
     const maxAIHours = tierHours * effectiveSigma;
     const maxComputeNeeded = maxAIHours * effectiveFlopsPerHour;
     
-    // Human capacity constraint: only humanCapable fraction of workforce can do this tier
-    // Total workforce hours × humanCapable = max hours humans can supply for this tier
+    // Human capacity constraint
     const humanCapacityHours = totalWorkforceHours * tier.humanCapable;
+    
+    // MARKET CLEARING: Reservation price = max willingness to pay per FLOP
+    // Bounded by both taskValue (economic value) and tierWage (alternative cost)
+    const maxPayPerHour = Math.min(tierWage, tier.taskValue);
+    const reservationPricePerFLOP = maxPayPerHour / effectiveFlopsPerHour;
     
     // Value per FLOP = economic value created per unit compute
     const valuePerFlop = tierWage / effectiveFlopsPerHour;
@@ -537,108 +550,141 @@ function allocateComputeOptimally(
       tier,
       tierIndex: i,
       tierWage,
-      aiCostPerHour,
+      productionCostPerHour,
       flopsPerHour: effectiveFlopsPerHour,
       valuePerFlop,
+      reservationPricePerFLOP,
       effectiveSigma,
       tierHours,
       maxAIHours,
       maxComputeNeeded,
-      isCostEffective: aiCostPerHour < tierWage, // Compare to tier wage, not floor
       humanCapacityHours,
     };
   });
   
-  // 2. Sort by value per FLOP (descending) - highest value first
-  // Only consider cost-effective tiers for compute allocation priority
-  const sortedTiers = [...tierValues].sort((a, b) => {
-    // Cost-effective tiers get priority
-    if (a.isCostEffective && !b.isCostEffective) return -1;
-    if (!a.isCostEffective && b.isCostEffective) return 1;
-    // Among cost-effective (or non-cost-effective), sort by value per FLOP
-    return b.valuePerFlop - a.valuePerFlop;
-  });
-  
-  // 3. Greedy allocation - allocate compute to highest value tiers first
+  // 2. Calculate total compute available
   const totalAvailableCompute = totalComputeBudget * SECONDS_PER_YEAR * AI_UTILIZATION;
   let remainingCompute = totalAvailableCompute;
+  
+  // 3. MARKET CLEARING ALLOCATION:
+  // Sort by reservation price DESCENDING - highest value uses get compute first
+  // This maximizes total economic value and naturally implements market clearing
+  const sortedByValue = [...tierValues].sort((a, b) => b.reservationPricePerFLOP - a.reservationPricePerFLOP);
   
   // Track allocation for each tier
   const allocations: Map<number, { 
     aiHours: number; 
+    humanHours: number;
+    unmetHours: number;
     computeUsed: number; 
-    bindingConstraint: 'cost' | 'compute' | 'substitutability' | 'humanCapacity' 
+    bindingConstraint: 'cost' | 'compute' | 'substitutability' | 'humanCapacity';
+    gotCompute: boolean; // Did this tier get any compute?
   }> = new Map();
   
-  for (const tv of sortedTiers) {
-    let aiHours = 0;
-    let computeUsed = 0;
-    let bindingConstraint: 'cost' | 'compute' | 'substitutability' | 'humanCapacity' = 'cost';
-    
-    // Calculate how much work humans can do for this tier
+  // Track clearing price (reservation price of the marginal tier)
+  let clearingPricePerFLOP = productionCostPerFLOP; // Default to production cost
+  let clearingTier: string | null = null;
+  let computeExhausted = false;
+  
+  // First pass: Allocate to tiers in order of willingness to pay (highest first)
+  for (const tv of sortedByValue) {
     const humanCanSupply = tv.humanCapacityHours;
-    const humanWorkNeeded = tv.tierHours * (1 - tv.effectiveSigma); // Work that must be human
-    const humanCapacityBinding = humanWorkNeeded > humanCanSupply;
+    const maxAIFromSigma = tv.maxAIHours;
     
-    if (!tv.isCostEffective) {
-      // AI is more expensive than humans - minimal adoption (early adopters only)
-      // But if human capacity is binding, AI must fill the gap
-      if (humanCapacityBinding) {
-        // Humans can't supply enough - AI must fill gap even if expensive
-        const humanActual = humanCanSupply;
-        aiHours = tv.tierHours - humanActual;
-        computeUsed = aiHours * tv.flopsPerHour;
-        bindingConstraint = 'humanCapacity';
-      } else {
-        aiHours = tv.tierHours * 0.02 * tv.effectiveSigma;
-        computeUsed = aiHours * tv.flopsPerHour;
-        bindingConstraint = 'cost';
-      }
+    // Check if humans can't cover the non-AI portion
+    const humanWorkIfAIMaxed = tv.tierHours - maxAIFromSigma;
+    const humanCapacityBinding = humanWorkIfAIMaxed > humanCanSupply;
+    const minAIHours = humanCapacityBinding ? tv.tierHours - humanCanSupply : 0;
+    const targetAIHours = Math.max(maxAIFromSigma, minAIHours);
+    
+    const computeWanted = targetAIHours * tv.flopsPerHour;
+    
+    let aiHours: number;
+    let bindingConstraint: 'cost' | 'compute' | 'substitutability' | 'humanCapacity';
+    let gotCompute = false;
+    
+    if (remainingCompute <= 0) {
+      // Compute already exhausted - this tier gets nothing
+      aiHours = 0;
+      bindingConstraint = 'compute';
+      computeExhausted = true;
+    } else if (computeWanted <= remainingCompute) {
+      // Have enough compute - fully satisfy this tier
+      aiHours = targetAIHours;
+      bindingConstraint = humanCapacityBinding ? 'humanCapacity' : 'substitutability';
+      gotCompute = true;
+      // This tier got compute, so update the clearing tier
+      clearingTier = tv.tier.id;
+      clearingPricePerFLOP = tv.reservationPricePerFLOP;
     } else {
-      // AI is cost-effective - allocate up to limits
-      const desiredAIHours = tv.maxAIHours; // Want to max out substitutability
-      
-      // But if human capacity is binding, AI must do more
-      const minAIHours = humanCapacityBinding ? tv.tierHours - humanCanSupply : 0;
-      const targetAIHours = Math.max(desiredAIHours, minAIHours);
-      
-      const computeNeeded = targetAIHours * tv.flopsPerHour;
-      
-      if (computeNeeded <= remainingCompute) {
-        // Have enough compute
-        aiHours = targetAIHours;
-        computeUsed = computeNeeded;
-        bindingConstraint = humanCapacityBinding ? 'humanCapacity' : 'substitutability';
-      } else {
-        // Compute is binding - allocate what we can
-        aiHours = remainingCompute / tv.flopsPerHour;
-        computeUsed = remainingCompute;
-        bindingConstraint = 'compute';
-      }
+      // Compute is binding - allocate what we can
+      aiHours = remainingCompute / tv.flopsPerHour;
+      bindingConstraint = 'compute';
+      gotCompute = true;
+      computeExhausted = true;
+      // This tier's reservation price is the clearing price (marginal tier)
+      clearingTier = tv.tier.id;
+      clearingPricePerFLOP = tv.reservationPricePerFLOP;
     }
     
+    const computeUsed = aiHours * tv.flopsPerHour;
     remainingCompute = Math.max(0, remainingCompute - computeUsed);
-    allocations.set(tv.tierIndex, { aiHours, computeUsed, bindingConstraint });
+    
+    const remainingWork = tv.tierHours - aiHours;
+    const humanHours = Math.min(remainingWork, humanCanSupply);
+    const unmetHours = Math.max(0, remainingWork - humanHours);
+    
+    allocations.set(tv.tierIndex, { 
+      aiHours, 
+      humanHours, 
+      unmetHours, 
+      computeUsed, 
+      bindingConstraint,
+      gotCompute,
+    });
   }
   
-  // 4. Build final allocations in original tier order
-  // Note: equilibrium wage fields will be populated by runModel after calling calculateEquilibriumWages
-  return tierValues.map(tv => {
+  // 4. Determine market price
+  // Market price = max(production cost, clearing price)
+  // When compute is scarce, price rises above production cost
+  let marketPricePerFLOP: number;
+  if (computeExhausted) {
+    // Scarcity: market price = clearing price (what marginal buyer is willing to pay)
+    marketPricePerFLOP = Math.max(productionCostPerFLOP, clearingPricePerFLOP);
+  } else {
+    // Abundance: market price = production cost (no scarcity premium)
+    marketPricePerFLOP = productionCostPerFLOP;
+    clearingTier = null;
+  }
+  
+  const scarcityPremium = marketPricePerFLOP / productionCostPerFLOP;
+  
+  // 5. Build final allocations in original tier order
+  // AI cost now uses MARKET price, not production cost
+  const finalAllocations: TierAllocation[] = tierValues.map(tv => {
     const alloc = allocations.get(tv.tierIndex)!;
-    const aiShare = alloc.aiHours / tv.tierHours;
+    const totalDone = alloc.aiHours + alloc.humanHours;
+    const aiShare = totalDone > 0 ? alloc.aiHours / totalDone : 0;
+    const humanShare = totalDone > 0 ? alloc.humanHours / totalDone : 0;
+    
+    // AI cost per hour using MARKET price (includes scarcity premium)
+    const marketCostPerHour = marketPricePerFLOP * tv.flopsPerHour;
     
     return {
       tier: tv.tier,
-      aiCostPerHour: tv.aiCostPerHour,
+      aiCostPerHour: marketCostPerHour,         // Market price (scarcity-adjusted)
+      productionCostPerHour: tv.productionCostPerHour, // Base hardware cost
       aiShare: Math.max(0, Math.min(1, aiShare)),
-      humanShare: Math.max(0, Math.min(1, 1 - aiShare)),
+      humanShare: Math.max(0, Math.min(1, humanShare)),
       effectiveSubstitutability: tv.effectiveSigma,
       bindingConstraint: alloc.bindingConstraint,
       hoursAI: alloc.aiHours,
-      hoursHuman: tv.tierHours - alloc.aiHours,
+      hoursHuman: alloc.humanHours,
+      hoursUnmet: alloc.unmetHours,
       computeUsed: alloc.computeUsed / SECONDS_PER_YEAR, // Convert back to FLOP/s
       tierWage: tv.tierWage, // Will be updated with equilibrium wage
       humanCapacityHours: tv.humanCapacityHours,
+      reservationPrice: tv.reservationPricePerFLOP,
       // Equilibrium wage fields - initially set to base values, updated by runModel
       effectiveSupply: tv.humanCapacityHours,
       laborTightness: 1.0,
@@ -646,6 +692,14 @@ function allocateComputeOptimally(
       wageAtCeiling: false,
     };
   });
+  
+  return {
+    allocations: finalAllocations,
+    marketPricePerFLOP,
+    productionCostPerFLOP,
+    scarcityPremium,
+    clearingTier,
+  };
 }
 
 // Human wage calculation now uses per-tier wages from TierAllocation.tierWage
@@ -756,9 +810,9 @@ export function runModel(params: ParameterValues): ModelOutputs {
       totalCognitiveWorkHours * tier.shareOfCognitive
     );
     
-    // Allocate compute optimally across tiers
+    // Allocate compute optimally across tiers using market clearing
     // Use FIXED workforce (baseCognitiveHours) for human capacity, not demand-scaled hours
-    const tierAllocations = allocateComputeOptimally(
+    const allocationResult = allocateComputeOptimally(
       taskTiers,
       tierHoursArray,
       tierSigmaArray,
@@ -768,10 +822,12 @@ export function runModel(params: ParameterValues): ModelOutputs {
       params.humanWageFloor,
       baseCognitiveHours  // Fixed workforce, not demand
     );
+    const tierAllocations = allocationResult.allocations;
+    const { marketPricePerFLOP, productionCostPerFLOP, scarcityPremium, clearingTier } = allocationResult;
     
     // Calculate equilibrium wages with inter-tier mobility
     // This accounts for displaced workers flowing to lower tiers and voluntary mobility
-    const tierHoursNeeded = tierAllocations.map(ta => ta.hoursHuman);
+    const tierHoursNeeded = tierAllocations.map(ta => ta.hoursHuman + ta.hoursUnmet);
     // Use FIXED workforce capacity (base 2024 hours), not demand-scaled capacity
     // Otherwise wages don't respond to increased demand (capacity scales with demand)
     const baseCapacity = taskTiers.map(t => baseCognitiveHours * t.humanCapable);
@@ -800,8 +856,10 @@ export function runModel(params: ParameterValues): ModelOutputs {
     // Calculate aggregate metrics
     const totalAIHours = tierAllocations.reduce((sum, ta) => sum + ta.hoursAI, 0);
     const totalHumanHours = tierAllocations.reduce((sum, ta) => sum + ta.hoursHuman, 0);
+    const totalUnmetHours = tierAllocations.reduce((sum, ta) => sum + ta.hoursUnmet, 0);
     const aiTaskShare = totalAIHours / totalCognitiveWorkHours;
     const humanTaskShare = totalHumanHours / totalCognitiveWorkHours;
+    const unmetTaskShare = totalUnmetHours / totalCognitiveWorkHours;
     
     // Calculate average human wage (weighted by hours worked in each tier) using equilibrium wages
     const totalTierHumanHours = tierAllocations.reduce((sum, ta) => sum + ta.hoursHuman, 0);
@@ -809,17 +867,30 @@ export function runModel(params: ParameterValues): ModelOutputs {
       ? tierAllocations.reduce((sum, ta) => sum + ta.tierWage * ta.hoursHuman, 0) / totalTierHumanHours
       : params.humanWageFloor;
     
-    // Determine primary binding constraint (most common across tiers weighted by hours)
-    const constraintCounts: Record<string, number> = { cost: 0, compute: 0, substitutability: 0, humanCapacity: 0 };
-    tierAllocations.forEach(ta => {
-      constraintCounts[ta.bindingConstraint] += ta.tier.shareOfCognitive;
-    });
-    const primaryBindingConstraint = Object.entries(constraintCounts)
-      .sort((a, b) => b[1] - a[1])[0][0] as 'cost' | 'compute' | 'substitutability' | 'humanCapacity';
+    // Compute utilization (relative to compute available for cognitive work, not total compute)
+    // Note: computeUsed is in FLOP/s, so multiply by SECONDS_PER_YEAR to get FLOPs/year
+    const totalComputeUsedFLOPs = tierAllocations.reduce((sum, ta) => sum + ta.computeUsed, 0) * SECONDS_PER_YEAR;
+    const cognitiveComputeBudget = effectiveComputeFlops * SECONDS_PER_YEAR * AI_UTILIZATION;
+    const computeUtilization = Math.min(1, totalComputeUsedFLOPs / cognitiveComputeBudget);
     
-    // Compute utilization
-    const totalComputeUsed = tierAllocations.reduce((sum, ta) => sum + ta.computeUsed, 0);
-    const computeUtilization = Math.min(1, totalComputeUsed / effectiveComputeFlops);
+    // Determine primary binding constraint with smarter logic:
+    // If compute is >95% utilized OR any tier is compute-bound with near-zero AI, compute is primary
+    const anyTierComputeStarved = tierAllocations.some(ta => 
+      ta.bindingConstraint === 'compute' && ta.aiShare < 0.05
+    );
+    
+    let primaryBindingConstraint: 'cost' | 'compute' | 'substitutability' | 'humanCapacity';
+    if (computeUtilization > 0.95 || anyTierComputeStarved) {
+      primaryBindingConstraint = 'compute';
+    } else {
+      // Fall back to weighted counting
+      const constraintCounts: Record<string, number> = { cost: 0, compute: 0, substitutability: 0, humanCapacity: 0 };
+      tierAllocations.forEach(ta => {
+        constraintCounts[ta.bindingConstraint] += ta.tier.shareOfCognitive;
+      });
+      primaryBindingConstraint = Object.entries(constraintCounts)
+        .sort((a, b) => b[1] - a[1])[0][0] as 'cost' | 'compute' | 'substitutability' | 'humanCapacity';
+    }
     
     // Track crossover year (average AI cost < wage floor)
     const avgAICost = tierAllocations.reduce((sum, ta) => 
@@ -844,13 +915,20 @@ export function runModel(params: ParameterValues): ModelOutputs {
       demandComponents: demandResult.components,
       aiTaskShare,
       humanTaskShare,
+      unmetTaskShare,
       humanWageEquilibrium,
       totalAIHours,
       totalHumanHours,
+      totalUnmetHours,
       tierAllocations,
       averageSubstitutability,
       primaryBindingConstraint,
       computeUtilization,
+      // Market pricing
+      productionCostPerFLOP,
+      marketPricePerFLOP,
+      scarcityPremium,
+      clearingTier,
     });
   }
   

@@ -1,29 +1,36 @@
 # AI Compute Bounds Calculator
 
-An interactive calculator exploring how compute constraints might affect AI/human labor substitution, based on the economic arguments from [Seb Krier](https://x.com/sebkrier) (Google DeepMind) and [CharlesD](https://x.com/CharlesD353).
+An interactive calculator exploring how compute constraints might affect AI/human labor substitution over time.
 
-## The Argument
+## What This Tool Does
 
-The debate centers on two positions:
+The model explores a key question: **Will AI make human labor economically worthless?**
 
-**Position A (AI Maximalist):** As AI becomes capable and cheap, it will fully substitute human labor across cognitive tasks.
+Two views frame the debate:
+- **Optimistic:** Compute is limited. Even cheap AI can't do *all* cognitive work. Humans retain valuable niches.
+- **Pessimistic:** AI costs fall faster than compute grows. If substitutability approaches 100%, human labor loses value.
 
-**Position B (Compute-Constrained):** Real constraints (compute capacity, energy, cost) combined with imperfect substitutability mean humans retain economic value even with capable AI.
-
-**Key Insight:** For human wages to approach zero, AI must be:
-1. Capable of performing the tasks
-2. Cheap enough to be economical
-3. A **near-perfect substitute** (not just capable)
-
-If AI and humans are complements rather than perfect substitutes, then as AI does more work, the remaining human work becomes *more valuable*, not worthless.
+This calculator lets you adjust assumptions and see how they affect human wages, employment, and task allocation across different scenarios.
 
 ## Features
 
-- **Parameter Controls:** Adjust compute growth, efficiency improvements, cost curves, and the crucial substitutability parameter
-- **Compute Supply Chart:** Visualize raw and effective (efficiency-adjusted) AI compute over time
-- **Wage Equilibrium Chart:** Compare AI cost per cognitive hour vs human wages
-- **Task Allocation Chart:** See how work splits between AI and humans under different scenarios
-- **Summary Panel:** Key metrics and insights for any projection year
+- **Tiered Task Model:** Cognitive work split into 5 difficulty tiers (Routine → Frontier), each with independent parameters
+- **Time-Varying Substitutability:** Per-tier σ that grows from initial value toward an asymptote over time
+- **Dynamic Demand:** Total work grows with GDP, AI-induced demand (Jevons paradox), and new task creation
+- **Human Capacity Constraints:** Per-tier limits on what fraction of the workforce can perform each task type
+- **Equilibrium Wages:** Market-clearing wages per tier based on supply/demand with inter-tier mobility
+- **Value-Maximizing Allocation:** Compute allocated to tasks with highest economic value per FLOP
+
+### Tabs
+
+| Tab | Description |
+|-----|-------------|
+| Introduction | Quick overview and suggested experiments |
+| Summary | Key metrics for the selected projection year |
+| Task Tiers | Per-tier breakdown of AI vs human allocation |
+| Charts | Time series of compute supply, costs, demand, and substitutability |
+| Model Info | Parameter sources, methodology, and detailed explanations |
+| Technical Details | Hidden model mechanics, formulas, and toy examples |
 
 ## Quick Start
 
@@ -43,91 +50,74 @@ npm run preview
 
 ## Deployment
 
-### Vercel (Recommended)
-
-```bash
-npm install -g vercel
-vercel
-```
-
-Or connect your GitHub repo to Vercel for automatic deployments.
-
-### Netlify
-
-```bash
-npm run build
-# Upload the `dist` folder to Netlify, or connect your repo
-```
-
 ### GitHub Pages
 
-```bash
-# Update vite.config.ts to set base path
-# base: '/your-repo-name/'
+The repository includes a GitHub Actions workflow (`.github/workflows/deploy.yml`) that automatically deploys to GitHub Pages on push to `main`.
 
-npm run build
-# Deploy dist folder to gh-pages branch
-```
+To enable:
+1. Go to Settings → Pages
+2. Set Source to "GitHub Actions"
 
-### Docker (Optional)
+### Other Options
 
-```dockerfile
-FROM node:20-alpine as build
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci
-COPY . .
-RUN npm run build
-
-FROM nginx:alpine
-COPY --from=build /app/dist /usr/share/nginx/html
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
-```
-
-```bash
-docker build -t ai-compute-calculator .
-docker run -p 8080:80 ai-compute-calculator
-```
+- **Vercel/Netlify:** Connect your GitHub repo for automatic deployments
+- **Manual:** Run `npm run build` and deploy the `dist` folder
 
 ## Key Parameters
 
+### Compute
 | Parameter | Description | Default |
 |-----------|-------------|---------|
-| Projection Year | Target year for analysis | 2030 |
 | Base Compute (2024) | Global AI inference capacity | 10^21.7 FLOP/s |
-| Compute Growth | Annual capacity growth rate | 50%/year |
-| Algorithmic Efficiency | Annual efficiency improvement | 1.4x/year |
-| **Substitutability (σ)** | 0=complements, 1=perfect substitutes | 0.7 |
-| Human Wage Floor | Minimum viable wage | $15/hour |
-| Compute Cost | Base cost per exaFLOP | $0.10 |
-| Cost Decline Rate | Annual cost reduction | 25%/year |
+| Compute Growth | Annual capacity growth | 100%/year |
+| Growth Slowdown | How much growth declines per year | 5%/year |
+| Algorithmic Efficiency | Annual efficiency multiplier | 2x/year |
+| AI Utilization | Fraction of compute for cognitive work | 30% |
+
+### Substitutability (σ)
+Each tier has independent parameters:
+| Parameter | Description |
+|-----------|-------------|
+| Initial σ | Starting substitutability (0 = complements, 1 = perfect substitutes) |
+| Max σ | Asymptotic limit |
+| σ Half-Life | Years to reach halfway to max |
+
+### Demand
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| Baseline Demand Growth | Annual growth in work demand | 2%/year |
+| Demand Elasticity | How much demand rises as AI cost falls | 0.3 |
+| New Task Creation | Rate AI enables entirely new work | 0.05 |
+
+### Per-Tier Settings
+| Parameter | Description |
+|-----------|-------------|
+| FLOPs/hr | Compute required for AI to do one hour of work |
+| Share | Fraction of total cognitive work in this tier |
+| Human Capable | Fraction of workforce able to do this tier |
+| Wage Multiplier | How much more this tier pays vs base wage |
+| Task Value | Maximum willingness to pay (wage ceiling) |
+| Wage Elasticity | How sensitive wages are to market tightness |
 
 ## Research Data
 
-See [RESEARCH_DATA.md](./RESEARCH_DATA.md) for sources and methodology.
+See [RESEARCH_DATA.md](./RESEARCH_DATA.md) for sources.
 
-Key data points:
-- Global AI inference compute estimated from deployed H100-class GPUs
-- Algorithmic efficiency improvements per Epoch AI research (~2x/year)
-- Global labor statistics from ILO
-- Model costs from OpenAI/Anthropic pricing (Dec 2024)
+Key sources:
+- **Compute:** Epoch AI estimates of global AI inference capacity
+- **Efficiency:** ~2x/year algorithmic improvement (Epoch AI)
+- **Labor:** ILO global workforce statistics, OECD cognitive labor share, McKinsey task automation studies
+- **Costs:** NVIDIA/cloud provider pricing (2024)
 
 ## Limitations
 
-This is a **simplified model** for exploring economic intuitions, not a precise forecast:
+This is a simplified model for exploring intuitions, not a precise forecast:
 
-- Treats "cognitive work" as uniform rather than heterogeneous tasks
-- Uses a single substitutability parameter rather than task-specific values
-- Extrapolates compute growth (actual growth depends on energy, supply chains, etc.)
-- Ignores physical labor, regulation, and preferences for human services
-- Doesn't model adjustment dynamics, just equilibrium outcomes
-
-## Context
-
-This calculator was built to explore the [CharlesD ↔ Seb Krier discussion](https://x.com/CharlesD353/status/2005592245232452079) on AGI and labor economics.
-
-Seb's core argument: Even with capable AI, if it's not a *perfect substitute* for human labor, complementarity effects mean human wages don't collapse to zero. The "margin" where AI cost = human wage determines task allocation, but substitutability determines wage dynamics.
+- Extrapolates compute growth (actual growth depends on energy, supply chains, investment)
+- Substitutability trajectories are speculative—we don't know how fast AI will become "good enough"
+- Ignores physical labor, regulation, preferences for human services
+- Doesn't model transition dynamics or geographic variation
+- Assumes rational economic allocation (reality is messier)
 
 ## Tech Stack
 
@@ -138,4 +128,8 @@ Seb's core argument: Even with capable AI, if it's not a *perfect substitute* fo
 
 ## License
 
-MIT
+AGPL-3.0 — see [LICENSE](./LICENSE)
+
+## Context
+
+Inspired by a [debate between @CharlesD353 and @SebKrier](https://x.com/CharlesD353/status/2005592245232452079) on whether compute limitations will preserve human labor value.

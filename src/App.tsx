@@ -8,7 +8,9 @@ import { TaskAllocationChart } from './components/TaskAllocationChart';
 import { SummaryPanel } from './components/SummaryPanel';
 import { TierBreakdown } from './components/TierBreakdown';
 import { SensitivityChart } from './components/SensitivityChart';
+import { ComputeCostTab } from './components/ComputeCostTab';
 import { Tabs } from './components/Tabs';
+import { Collapsible } from './components/Collapsible';
 import { getDefaultValues } from './models/parameters';
 import type { ParameterValues } from './models/parameters';
 import { runModel } from './models/computeModel';
@@ -23,6 +25,145 @@ function App() {
   
   const handleReset = () => {
     setParams(getDefaultValues());
+  };
+
+  // Scenario presets (keep baseComputeExponent the same across all)
+  const scenarios = [
+    {
+      id: 'optimistic',
+      name: 'Optimistic',
+      color: 'emerald',
+      description: 'Low substitutability ceiling—AI assists but doesn\'t fully replace humans',
+      explanation: `This scenario assumes AI hits fundamental limits in replacing human judgment, creativity, and social interaction. Even if AI becomes very capable at narrow tasks, it may never fully substitute for human work in most domains.
+
+Key assumptions:
+• Routine tasks cap at 70% substitutability—humans still needed for edge cases and oversight
+• Complex/Expert tasks cap at 40-50%—AI augments but doesn't replace professionals  
+• Frontier work (research, strategy) caps at 30%—fundamentally requires human insight
+• Slow σ growth (8-20 year half-lives)—technological progress is gradual
+
+This reflects views that AGI is far off, or that even capable AI won't be trusted/accepted as a full replacement for human workers in most contexts.`,
+      changes: {
+        tier_routine_maxSigma: 0.7,
+        tier_standard_maxSigma: 0.6,
+        tier_complex_maxSigma: 0.5,
+        tier_expert_maxSigma: 0.4,
+        tier_frontier_maxSigma: 0.3,
+        tier_routine_sigmaHalfLife: 8,
+        tier_standard_sigmaHalfLife: 10,
+        tier_complex_sigmaHalfLife: 12,
+        tier_expert_sigmaHalfLife: 15,
+        tier_frontier_sigmaHalfLife: 20,
+      },
+    },
+    {
+      id: 'pessimistic',
+      name: 'High Substitutability',
+      color: 'red',
+      description: 'AI rapidly approaches near-perfect substitution across all tiers',
+      explanation: `This scenario assumes AI capabilities advance rapidly and society quickly adopts AI as a near-complete replacement for human cognitive labor. Barriers like trust, regulation, and organizational inertia are overcome within years, not decades.
+
+Key assumptions:
+• Routine tasks reach 99% substitutability—fully automated with minimal oversight
+• Standard/Complex tasks reach 95-97%—AI handles nearly all professional work
+• Expert/Frontier tasks reach 85-90%—even research and strategy largely AI-driven
+• Fast σ growth (2-6 year half-lives)—rapid capability gains and adoption
+
+This reflects views that transformative AI is imminent and that economic pressures will drive rapid automation regardless of social preferences. Human labor value could collapse within 10-15 years.`,
+      changes: {
+        tier_routine_maxSigma: 0.99,
+        tier_standard_maxSigma: 0.97,
+        tier_complex_maxSigma: 0.95,
+        tier_expert_maxSigma: 0.90,
+        tier_frontier_maxSigma: 0.85,
+        tier_routine_sigmaHalfLife: 2,
+        tier_standard_sigmaHalfLife: 3,
+        tier_complex_sigmaHalfLife: 4,
+        tier_expert_sigmaHalfLife: 5,
+        tier_frontier_sigmaHalfLife: 6,
+      },
+    },
+    {
+      id: 'compute-constrained',
+      name: 'Compute Constrained',
+      color: 'amber',
+      description: 'Higher compute requirements per task make capacity the bottleneck',
+      explanation: `This scenario assumes AI tasks require significantly more compute than default estimates—perhaps because real-world deployment needs much more inference than benchmarks suggest, or because achieving reliability requires expensive ensembling and verification.
+
+Key assumptions:
+• All tier FLOPs requirements increased by ~100x (e.g., routine: 10^15 → 10^17)
+• Compute growth slowed to 50%/year (vs. 100% default)—supply chain constraints, energy limits
+• Faster growth decay (8%/year)—exponential growth can't continue indefinitely
+
+This makes raw compute capacity the binding constraint rather than cost or substitutability. Even if AI is cheap per FLOP, there simply isn't enough compute to do all the work. Human labor fills the gap.`,
+      changes: {
+        tier_routine_flops: 17,
+        tier_standard_flops: 19,
+        tier_complex_flops: 21,
+        tier_expert_flops: 23,
+        tier_frontier_flops: 25,
+        computeGrowthRate: 0.5,
+        computeGrowthDecay: 0.08,
+      },
+    },
+    {
+      id: 'high-demand',
+      name: 'High Demand Growth',
+      color: 'blue',
+      description: 'AI enables lots of new work—total cognitive hours grow substantially',
+      explanation: `This scenario assumes cheap AI dramatically expands what's economically feasible. As AI costs fall, entirely new categories of work emerge—things that weren't worth doing when they required expensive human labor.
+
+Key assumptions:
+• High demand elasticity (0.6)—strong Jevons paradox effect; cheaper AI → much more AI use
+• High new task creation (0.15)—AI enables personalized education, ubiquitous assistants, mass customization
+• Higher baseline growth (4%/year)—AI-augmented economy grows faster
+
+In this world, total cognitive work hours might 2-3x even as AI does most of it. Humans may do fewer hours but remain employed because there's so much more work to do. Wages could remain stable even with high substitutability.`,
+      changes: {
+        demandElasticity: 0.6,
+        newTaskCreationRate: 0.15,
+        baselineDemandGrowth: 0.04,
+      },
+    },
+    {
+      id: 'slow-progress',
+      name: 'Slow AI Progress',
+      color: 'zinc',
+      description: 'Algorithmic efficiency gains and cost declines slow down',
+      explanation: `This scenario assumes AI progress decelerates from current rates. Perhaps the low-hanging fruit has been picked, or scaling laws hit diminishing returns. AI still improves, but more slowly than optimists expect.
+
+Key assumptions:
+• Efficiency gains drop to 1.3x/year (vs. 2x default)—algorithmic improvements slow
+• Faster efficiency decay (12%/year)—gains get harder over time
+• Cost decline slows to 15%/year (vs. 25%)—hardware improvements plateau
+• Slower σ growth (10-25 year half-lives)—capability gains take longer to translate to deployable substitution
+
+This extends the timeline for AI disruption by 10-20 years. Humans have more time to adapt, retrain, and find new niches. Compute constraints may also become more binding as supply grows faster than efficiency.`,
+      changes: {
+        efficiencyImprovement: 1.3,
+        efficiencyDecay: 0.12,
+        costDeclineRate: 0.15,
+        costDeclineDecay: 0.10,
+        tier_routine_sigmaHalfLife: 10,
+        tier_standard_sigmaHalfLife: 12,
+        tier_complex_sigmaHalfLife: 15,
+        tier_expert_sigmaHalfLife: 18,
+        tier_frontier_sigmaHalfLife: 25,
+      },
+    },
+  ];
+
+  const applyScenario = (scenarioId: string) => {
+    const scenario = scenarios.find(s => s.id === scenarioId);
+    if (!scenario) return;
+    
+    // Start from defaults, then apply scenario changes (keeping baseComputeExponent)
+    const defaults = getDefaultValues();
+    const newParams = { ...defaults };
+    for (const [key, value] of Object.entries(scenario.changes)) {
+      (newParams as Record<string, number>)[key] = value;
+    }
+    setParams(newParams);
   };
   
   // Run the model with current parameters
@@ -169,6 +310,14 @@ function App() {
       label: 'Summary',
       icon: '📊',
       content: <SummaryPanel outputs={modelOutputs} params={params} />,
+    },
+    {
+      id: 'compute-costs',
+      label: 'Compute Costs',
+      icon: '💰',
+      content: targetProjection && (
+        <ComputeCostTab projection={targetProjection} params={params} />
+      ),
     },
     {
       id: 'tiers',
@@ -747,6 +896,97 @@ function App() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: 'scenarios',
+      label: 'Scenarios',
+      icon: '🎯',
+      content: (
+        <div className="bg-[#12121a] rounded-xl p-5 border border-zinc-800 space-y-6">
+          <div>
+            <h3 className="text-lg text-zinc-100 mb-2">Scenario Presets</h3>
+            <p className="text-sm text-zinc-400">
+              Click a scenario to load a preset configuration. Base compute (10^{params.baseComputeExponent} FLOP/s) stays the same—only other parameters change.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            {scenarios.map((scenario) => {
+              const colorClasses: Record<string, { bg: string; border: string; text: string; hover: string }> = {
+                emerald: { bg: 'bg-emerald-950/30', border: 'border-emerald-900/50', text: 'text-emerald-400', hover: 'hover:border-emerald-700' },
+                red: { bg: 'bg-red-950/30', border: 'border-red-900/50', text: 'text-red-400', hover: 'hover:border-red-700' },
+                amber: { bg: 'bg-amber-950/30', border: 'border-amber-900/50', text: 'text-amber-400', hover: 'hover:border-amber-700' },
+                blue: { bg: 'bg-blue-950/30', border: 'border-blue-900/50', text: 'text-blue-400', hover: 'hover:border-blue-700' },
+                zinc: { bg: 'bg-zinc-900/50', border: 'border-zinc-700/50', text: 'text-zinc-300', hover: 'hover:border-zinc-600' },
+              };
+              const colors = colorClasses[scenario.color] || colorClasses.zinc;
+              
+              return (
+                <div key={scenario.id} className={`${colors.bg} ${colors.border} border rounded-lg overflow-hidden`}>
+                  <button
+                    onClick={() => applyScenario(scenario.id)}
+                    className={`w-full p-4 text-left ${colors.hover} transition-all cursor-pointer`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className={`${colors.text} text-lg mb-1`}>{scenario.name}</p>
+                        <p className="text-sm text-zinc-400">{scenario.description}</p>
+                      </div>
+                      <span className="text-xs text-zinc-500 bg-zinc-800/50 px-2 py-1 rounded ml-4 whitespace-nowrap">
+                        Apply →
+                      </span>
+                    </div>
+                  </button>
+                  <Collapsible title="See full explanation" defaultOpen={false}>
+                    <div className="px-4 pb-4 text-sm text-zinc-400 whitespace-pre-line">
+                      {scenario.explanation}
+                      <div className="mt-4 pt-3 border-t border-zinc-800/50">
+                        <p className="text-xs text-zinc-300 mb-2">Key parameters:</p>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs font-mono">
+                          {Object.entries(scenario.changes).map(([key, value]) => {
+                            const displayKey = key
+                              .replace('tier_', '')
+                              .replace(/_/g, ' ')
+                              .replace('flops', 'FLOPs')
+                              .replace('maxSigma', 'max σ')
+                              .replace('sigmaHalfLife', 'σ half-life');
+                            const displayValue = key.includes('Sigma') 
+                              ? `${((value as number) * 100).toFixed(0)}%`
+                              : key.includes('Rate') || key.includes('Growth') || key.includes('Elasticity') || key.includes('Decay')
+                              ? `${((value as number) * 100).toFixed(0)}%`
+                              : key.includes('flops')
+                              ? `10^${value}`
+                              : key.includes('HalfLife')
+                              ? `${value} yrs`
+                              : key.includes('Improvement')
+                              ? `${value}×/yr`
+                              : String(value);
+                            return (
+                              <div key={key} className="flex justify-between">
+                                <span className="text-zinc-500">{displayKey}:</span>
+                                <span className="text-zinc-300">{displayValue}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  </Collapsible>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="border-t border-zinc-800 pt-4">
+            <button
+              onClick={handleReset}
+              className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg text-sm transition-colors"
+            >
+              Reset to Defaults
+            </button>
           </div>
         </div>
       ),
