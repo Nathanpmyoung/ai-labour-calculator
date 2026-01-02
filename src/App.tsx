@@ -1514,7 +1514,7 @@ finalWage = min(rawWage, taskValue)`}
       
       {/* Footer */}
       <footer className="border-t border-zinc-800 py-6">
-        <div className="max-w-7xl mx-auto px-4 text-center text-xs text-zinc-600">
+        <div className="max-w-7xl mx-auto px-4 text-center text-xs text-zinc-600 space-y-2">
           <p>
             Built to explore the{' '}
             <a 
@@ -1526,6 +1526,11 @@ finalWage = min(rawWage, taskValue)`}
               CharlesD ↔ Seb Krier discussion
             </a>{' '}
             on AGI and labor economics.
+          </p>
+          <p className="text-zinc-500">
+            Thanks to Claude Opus 4.5 for doing most of the research legwork and virtually all of the coding, 
+            GPT 5.2 Extra High for resolving one tricky issue, and Simon Morris, Nathan Young and Peter Wildeford 
+            for taking a look at early drafts.
           </p>
         </div>
       </footer>
