@@ -40,7 +40,7 @@ Key assumptions:
 • Routine tasks cap at 70% substitutability—humans still needed for edge cases and oversight
 • Complex/Expert tasks cap at 40-50%—AI augments but doesn't replace professionals  
 • Frontier work (research, strategy) caps at 30%—fundamentally requires human insight
-• Slow σ growth (8-20 year half-lives)—technological progress is gradual
+• Late breakthroughs (2030-2040)—technological progress is gradual
 
 This reflects views that AGI is far off, or that even capable AI won't be trusted/accepted as a full replacement for human workers in most contexts.`,
       changes: {
@@ -49,11 +49,16 @@ This reflects views that AGI is far off, or that even capable AI won't be truste
         tier_complex_maxSigma: 0.5,
         tier_expert_maxSigma: 0.4,
         tier_frontier_maxSigma: 0.3,
-        tier_routine_sigmaHalfLife: 8,
-        tier_standard_sigmaHalfLife: 10,
-        tier_complex_sigmaHalfLife: 12,
-        tier_expert_sigmaHalfLife: 15,
-        tier_frontier_sigmaHalfLife: 20,
+        tier_routine_sigmaMidpoint: 2030,
+        tier_standard_sigmaMidpoint: 2032,
+        tier_complex_sigmaMidpoint: 2035,
+        tier_expert_sigmaMidpoint: 2038,
+        tier_frontier_sigmaMidpoint: 2042,
+        tier_routine_sigmaSteepness: 0.8,
+        tier_standard_sigmaSteepness: 0.7,
+        tier_complex_sigmaSteepness: 0.6,
+        tier_expert_sigmaSteepness: 0.5,
+        tier_frontier_sigmaSteepness: 0.4,
       },
     },
     {
@@ -67,7 +72,7 @@ Key assumptions:
 • Routine tasks reach 99% substitutability—fully automated with minimal oversight
 • Standard/Complex tasks reach 95-97%—AI handles nearly all professional work
 • Expert/Frontier tasks reach 85-90%—even research and strategy largely AI-driven
-• Fast σ growth (2-6 year half-lives)—rapid capability gains and adoption
+• Early breakthroughs (2025-2028)—rapid capability gains and adoption
 
 This reflects views that transformative AI is imminent and that economic pressures will drive rapid automation regardless of social preferences. Human labor value could collapse within 10-15 years.`,
       changes: {
@@ -76,11 +81,16 @@ This reflects views that transformative AI is imminent and that economic pressur
         tier_complex_maxSigma: 0.95,
         tier_expert_maxSigma: 0.90,
         tier_frontier_maxSigma: 0.85,
-        tier_routine_sigmaHalfLife: 2,
-        tier_standard_sigmaHalfLife: 3,
-        tier_complex_sigmaHalfLife: 4,
-        tier_expert_sigmaHalfLife: 5,
-        tier_frontier_sigmaHalfLife: 6,
+        tier_routine_sigmaMidpoint: 2025,
+        tier_standard_sigmaMidpoint: 2026,
+        tier_complex_sigmaMidpoint: 2027,
+        tier_expert_sigmaMidpoint: 2028,
+        tier_frontier_sigmaMidpoint: 2029,
+        tier_routine_sigmaSteepness: 3,
+        tier_standard_sigmaSteepness: 2.5,
+        tier_complex_sigmaSteepness: 2,
+        tier_expert_sigmaSteepness: 1.8,
+        tier_frontier_sigmaSteepness: 1.5,
       },
     },
     {
@@ -136,7 +146,7 @@ Key assumptions:
 • Efficiency gains drop to 1.3x/year (vs. 2x default)—algorithmic improvements slow
 • Faster efficiency decay (12%/year)—gains get harder over time
 • Cost decline slows to 15%/year (vs. 25%)—hardware improvements plateau
-• Slower σ growth (10-25 year half-lives)—capability gains take longer to translate to deployable substitution
+• Late breakthroughs (2032-2045)—capability gains take longer to translate to deployable substitution
 
 This extends the timeline for AI disruption by 10-20 years. Humans have more time to adapt, retrain, and find new niches. Compute constraints may also become more binding as supply grows faster than efficiency.`,
       changes: {
@@ -144,11 +154,16 @@ This extends the timeline for AI disruption by 10-20 years. Humans have more tim
         efficiencyDecay: 0.12,
         costDeclineRate: 0.15,
         costDeclineDecay: 0.10,
-        tier_routine_sigmaHalfLife: 10,
-        tier_standard_sigmaHalfLife: 12,
-        tier_complex_sigmaHalfLife: 15,
-        tier_expert_sigmaHalfLife: 18,
-        tier_frontier_sigmaHalfLife: 25,
+        tier_routine_sigmaMidpoint: 2032,
+        tier_standard_sigmaMidpoint: 2035,
+        tier_complex_sigmaMidpoint: 2038,
+        tier_expert_sigmaMidpoint: 2042,
+        tier_frontier_sigmaMidpoint: 2048,
+        tier_routine_sigmaSteepness: 0.6,
+        tier_standard_sigmaSteepness: 0.5,
+        tier_complex_sigmaSteepness: 0.4,
+        tier_expert_sigmaSteepness: 0.4,
+        tier_frontier_sigmaSteepness: 0.3,
       },
     },
   ];
@@ -280,7 +295,7 @@ This extends the timeline for AI disruption by 10-20 years. Humans have more tim
               </div>
               <div className="bg-zinc-900/50 rounded p-3 border border-zinc-800">
                 <p className="text-red-400">Pessimist scenario</p>
-                <p className="text-zinc-500">Set σ max to 0.99, half-life to 3 years. Human wages and employment fall sharply.</p>
+                <p className="text-zinc-500">Set σ max to 0.99, midpoint to 2026, steepness to 3. Human wages and employment fall sharply.</p>
               </div>
               <div className="bg-zinc-900/50 rounded p-3 border border-zinc-800">
                 <p className="text-amber-400">Compute-constrained</p>
@@ -473,6 +488,24 @@ This extends the timeline for AI disruption by 10-20 years. Humans have more tim
               </div>
             </div>
             
+            {/* AI Utilization - Hidden Constant */}
+            <div className="bg-amber-950/30 border border-amber-900/40 rounded-lg p-4 mt-4">
+              <h4 className="text-sm font-medium text-amber-300 mb-2">⚠️ Hidden Constant: AI Utilization (30%)</h4>
+              <p className="text-xs text-zinc-400 mb-2">
+                Only <strong className="text-amber-400">30% of global AI compute</strong> is assumed to go to cognitive work that competes with human labor. 
+                The rest goes to:
+              </p>
+              <ul className="text-xs text-zinc-500 list-disc list-inside ml-1 space-y-1">
+                <li><strong className="text-zinc-300">Training</strong> — Large model training runs consume significant compute</li>
+                <li><strong className="text-zinc-300">Non-cognitive inference</strong> — Recommender systems, video/image generation, ads ranking</li>
+                <li><strong className="text-zinc-300">Tasks without human equivalents</strong> — Protein folding, game AI, robotics control</li>
+              </ul>
+              <p className="text-xs text-zinc-500 mt-2">
+                This 30% figure strongly affects compute scarcity outcomes. If you believe more compute goes to cognitive work, 
+                the model would show less scarcity. This constant is not adjustable in the UI.
+              </p>
+            </div>
+            
             {/* Declining Growth Rates - NEW */}
             <div className="pt-4 border-t border-zinc-800 mt-4 text-xs text-zinc-500">
               <h4 className="text-zinc-400 font-medium mb-2">Declining Growth Rates — Why Exponentials Can't Last</h4>
@@ -498,16 +531,28 @@ This extends the timeline for AI disruption by 10-20 years. Humans have more tim
               </p>
             </div>
             <div className="pt-4 border-t border-zinc-800 mt-4 text-xs text-zinc-500">
-              <h4 className="text-zinc-400 font-medium mb-2">Substitutability (σ) — Per-Tier Growth</h4>
-              <p>
-                Each tier has its own σ trajectory: <strong className="text-emerald-400">Routine</strong> (50%→95%, 2.5yr half-life), 
-                <strong className="text-blue-400">Standard</strong> (30%→80%, 4yr), 
-                <strong className="text-violet-400">Complex</strong> (15%→60%, 6yr), 
-                <strong className="text-orange-400">Expert</strong> (5%→35%, 10yr), 
-                <strong className="text-red-400">Frontier</strong> (2%→15%, 15yr). 
-                The <strong className="text-zinc-300">σ Half-Life</strong> controls how fast each tier converges to its max—Routine 
-                develops quickly (2.5 years to close half the gap), Frontier very slowly (15 years). 
-                These values are <strong className="text-amber-400">not empirical</strong>—they represent the key debate.
+              <h4 className="text-zinc-400 font-medium mb-2">Substitutability (σ) — S-Curve Growth</h4>
+              <p className="mb-2">
+                AI capabilities often develop in breakthroughs, not smooth curves. Each tier uses an <strong className="text-zinc-300">S-curve (sigmoid)</strong> model 
+                with a <strong className="text-zinc-300">midpoint year</strong> (when the breakthrough happens) and <strong className="text-zinc-300">steepness</strong> (how rapid the transition):
+              </p>
+              <div className="space-y-1 mb-2">
+                {modelOutputs.tiers.map((tier) => (
+                  <div key={tier.id} className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: tier.color }} />
+                    <span className="text-zinc-300 w-16">{tier.name}</span>
+                    <span className="text-zinc-500">
+                      {(tier.initialSigma * 100).toFixed(0)}%→{(tier.maxSigma * 100).toFixed(0)}%, 
+                      breakthrough ~{tier.sigmaMidpoint}, 
+                      steepness {tier.sigmaSteepness}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-zinc-500">
+                <strong className="text-amber-400">Key insight:</strong> Move the midpoint later to model "AI can't do this yet, but eventually will." 
+                Steepness controls transition speed — use low values for gradual adoption (organizational inertia, 
+                regulation, trust-building) even if capabilities arrive quickly.
               </p>
             </div>
             <div className="pt-4 border-t border-zinc-800 mt-4 text-xs text-zinc-500">
@@ -521,6 +566,29 @@ This extends the timeline for AI disruption by 10-20 years. Humans have more tim
                   we do <em>more</em> of them, not the same amount. A report that took 10 hours now takes 1? 
                   Organizations don't cut report-writing by 90%—they commission 5× more reports.
                 </p>
+                
+                {/* Log-based demand elasticity explanation */}
+                <div className="bg-indigo-950/30 border border-indigo-900/40 rounded-lg p-3 mt-2">
+                  <p className="text-indigo-300 font-medium mb-1">📐 Technical Note: Log-Based Elasticity</p>
+                  <p className="text-zinc-400 mb-2">
+                    The "Demand Elasticity" parameter uses a <strong className="text-zinc-300">log-based</strong> form, 
+                    not a standard isoelastic demand curve:
+                  </p>
+                  <div className="bg-zinc-950 p-2 rounded font-mono text-xs text-emerald-400 mb-2">
+                    multiplier = 1 + ε × log₁₀(1 / costReductionFactor)
+                  </div>
+                  <p className="text-zinc-500 text-xs mb-1">
+                    <strong>Example (ε = 0.5):</strong> 
+                    50% cost drop → 1.15× demand. 
+                    90% cost drop → 1.50× demand. 
+                    99% cost drop → 2.00× demand.
+                  </p>
+                  <p className="text-zinc-500 text-xs">
+                    This means the <em>effective</em> elasticity <strong className="text-amber-400">accelerates</strong> as AI gets very cheap — 
+                    intentionally modeling an accelerating Jevons effect. Think of it as a "Jevons coefficient" rather than a standard elasticity.
+                  </p>
+                </div>
+                
                 <p>
                   <strong className="text-emerald-400">New Task Creation:</strong> AI enables entirely new categories 
                   of work that were previously impossible or uneconomical.
@@ -547,31 +615,13 @@ This extends the timeline for AI disruption by 10-20 years. Humans have more tim
                 (reflecting skill scarcity):
               </p>
               <div className="grid grid-cols-5 gap-2 text-center">
-                <div className="bg-zinc-900/50 rounded p-2">
-                  <p className="text-emerald-400 font-medium">Routine</p>
-                  <p className="text-zinc-400">90% can do</p>
-                  <p className="text-zinc-400">1× wage</p>
-                </div>
-                <div className="bg-zinc-900/50 rounded p-2">
-                  <p className="text-blue-400 font-medium">Standard</p>
-                  <p className="text-zinc-400">65% can do</p>
-                  <p className="text-zinc-400">1.5× wage</p>
-                </div>
-                <div className="bg-zinc-900/50 rounded p-2">
-                  <p className="text-violet-400 font-medium">Complex</p>
-                  <p className="text-zinc-400">35% can do</p>
-                  <p className="text-zinc-400">2.5× wage</p>
-                </div>
-                <div className="bg-zinc-900/50 rounded p-2">
-                  <p className="text-orange-400 font-medium">Expert</p>
-                  <p className="text-zinc-400">12% can do</p>
-                  <p className="text-zinc-400">5× wage</p>
-                </div>
-                <div className="bg-zinc-900/50 rounded p-2">
-                  <p className="text-red-400 font-medium">Frontier</p>
-                  <p className="text-zinc-400">3% can do</p>
-                  <p className="text-zinc-400">10× wage</p>
-                </div>
+                {modelOutputs.tiers.map(tier => (
+                  <div key={tier.id} className="bg-zinc-900/50 rounded p-2">
+                    <p className="font-medium" style={{ color: tier.color }}>{tier.name}</p>
+                    <p className="text-zinc-400">{(tier.humanCapable * 100).toFixed(0)}% can do</p>
+                    <p className="text-zinc-400">{tier.wageMultiplier}× wage</p>
+                  </div>
+                ))}
               </div>
               <p className="mt-2 text-zinc-500">
                 If demand exceeds human capacity for a tier, "Human Capacity" becomes the binding constraint—AI 
@@ -699,20 +749,35 @@ This extends the timeline for AI disruption by 10-20 years. Humans have more tim
                 </div>
                 
                 <div className="bg-zinc-900/50 rounded-lg p-3 border border-zinc-800">
-                  <p className="text-zinc-300 font-medium mb-1">σ Half-Life <span className="text-zinc-500 font-normal">(unit: years, 1-30)</span></p>
+                  <p className="text-zinc-300 font-medium mb-1">σ Midpoint <span className="text-zinc-500 font-normal">(unit: year, 2024-2050)</span></p>
                   <p>
-                    <strong>Years to close half the gap</strong> between current σ and σ(max) for this tier.
-                    Lower = faster AI progress toward human-level substitutability.
+                    <strong>The "breakthrough" year</strong> — when σ reaches halfway between initial and max. 
+                    This is when AI capabilities for this tier cross a threshold and adoption accelerates.
                   </p>
                   <ul className="list-disc list-inside mt-2 space-y-1">
-                    <li><strong className="text-emerald-400">Routine: 2.5 years</strong> — simple tasks become AI-substitutable quickly</li>
-                    <li><strong className="text-blue-400">Standard: 4 years</strong> — knowledge work takes longer</li>
-                    <li><strong className="text-violet-400">Complex: 6 years</strong> — complex reasoning slower to crack</li>
-                    <li><strong className="text-orange-400">Expert: 10 years</strong> — expert judgment difficult to replicate</li>
-                    <li><strong className="text-red-400">Frontier: 15 years</strong> — breakthrough innovation hardest to automate</li>
+                    <li><strong className="text-emerald-400">Routine: 2026</strong> — already happening, rapid adoption</li>
+                    <li><strong className="text-blue-400">Standard: 2027</strong> — knowledge work breakthrough imminent</li>
+                    <li><strong className="text-violet-400">Complex: 2029</strong> — complex reasoning a few years out</li>
+                    <li><strong className="text-orange-400">Expert: 2032</strong> — expert judgment takes longer</li>
+                    <li><strong className="text-red-400">Frontier: 2035</strong> — breakthrough innovation hardest to crack</li>
+                  </ul>
+                </div>
+                
+                <div className="bg-zinc-900/50 rounded-lg p-3 border border-zinc-800">
+                  <p className="text-zinc-300 font-medium mb-1">σ Steepness <span className="text-zinc-500 font-normal">(unit: 0.3-5)</span></p>
+                  <p>
+                    <strong>How rapid the S-curve transition</strong> — controls whether the breakthrough is gradual or sudden.
+                  </p>
+                  <ul className="list-disc list-inside mt-2 space-y-1">
+                    <li><strong className="text-zinc-300">0.5</strong> — very gradual (~10 year spread)</li>
+                    <li><strong className="text-zinc-300">1.0</strong> — moderate (~5 year spread)</li>
+                    <li><strong className="text-zinc-300">2.0</strong> — fairly sharp (~2-3 year spread)</li>
+                    <li><strong className="text-zinc-300">3.0+</strong> — step-like (~1 year, sudden capability jump)</li>
                   </ul>
                   <p className="mt-2 text-zinc-400">
-                    After 2 half-lives, σ is 75% of the way to max. After 3, 87.5%.
+                    <strong className="text-amber-400">Tip:</strong> Steepness can also proxy for <em>adoption lag</em>. 
+                    Even if AI becomes capable quickly, low steepness models slow organizational adoption 
+                    (trust-building, regulation, integration costs, retraining).
                   </p>
                 </div>
                 
@@ -952,7 +1017,8 @@ This extends the timeline for AI disruption by 10-20 years. Humans have more tim
                               .replace(/_/g, ' ')
                               .replace('flops', 'FLOPs')
                               .replace('maxSigma', 'max σ')
-                              .replace('sigmaHalfLife', 'σ half-life');
+                              .replace('sigmaMidpoint', 'σ midpoint')
+                              .replace('sigmaSteepness', 'σ steepness');
                             const displayValue = key.includes('Sigma') 
                               ? `${((value as number) * 100).toFixed(0)}%`
                               : key.includes('Rate') || key.includes('Growth') || key.includes('Elasticity') || key.includes('Decay')
@@ -1086,26 +1152,29 @@ effective = raw × Π[y=0 to t-1] efficiency(y)`}
 
           {/* 3. Substitutability Growth */}
           <div className="border-t border-zinc-800 pt-4">
-            <h4 className="text-md font-semibold text-amber-400 mb-3">3. Substitutability (σ) Growth</h4>
+            <h4 className="text-md font-semibold text-amber-400 mb-3">3. Substitutability (σ) — S-Curve Growth</h4>
             
             <div className="space-y-3 text-sm text-zinc-400">
               <div className="bg-zinc-900/50 rounded-lg p-3 border border-zinc-800">
-                <p className="text-zinc-300 font-medium mb-2">Exponential Decay to Asymptote</p>
+                <p className="text-zinc-300 font-medium mb-2">Sigmoid (S-Curve) Model</p>
+                <p className="text-xs mb-2">
+                  AI capabilities often develop in breakthroughs, not smooth exponential curves. 
+                  The S-curve captures: slow start → rapid transition → plateau.
+                </p>
                 <pre className="bg-zinc-950 p-2 rounded text-xs text-emerald-400 overflow-x-auto">
-{`τ = halfLife / ln(2)
-σ(t) = σ_max - (σ_max - σ_initial) × e^(-t / τ)`}
+{`σ(year) = σ_initial + (σ_max - σ_initial) / (1 + e^(-steepness × (year - midpoint)))`}
                 </pre>
-                <p className="mt-2 text-xs">Each tier has its own σ_initial, σ_max, and halfLife.</p>
+                <p className="mt-2 text-xs">Each tier has: σ_initial, σ_max, midpoint (breakthrough year), steepness.</p>
               </div>
               
               <div className="bg-indigo-950/30 rounded-lg p-3 border border-indigo-900/40">
-                <p className="text-indigo-300 font-medium mb-2">📝 Example: </p>
+                <p className="text-indigo-300 font-medium mb-2">📝 Example: Frontier Tier</p>
                 <div className="text-xs space-y-1 font-mono">
-                  <p>σ_initial=0.50, σ_max=0.95, halfLife=2.5 years</p>
-                  <p>τ = 2.5 / 0.693 = 3.6</p>
-                  <p>Year 2.5: σ = 0.95 - 0.45 × e^(-2.5/3.6) = 0.95 - 0.45 × 0.50 = <span className="text-emerald-400">0.725</span></p>
-                  <p>Year 5: σ = 0.95 - 0.45 × e^(-5/3.6) = 0.95 - 0.45 × 0.25 = <span className="text-emerald-400">0.84</span></p>
-                  <p>Year 10: σ = 0.95 - 0.45 × e^(-10/3.6) = 0.95 - 0.45 × 0.06 = <span className="text-emerald-400">0.92</span></p>
+                  <p>σ_initial=0.02, σ_max=0.80, midpoint=2035, steepness=0.8</p>
+                  <p className="mt-2">Year 2024: σ = 0.02 + 0.78 / (1 + e^(8.8)) ≈ <span className="text-emerald-400">0.02</span> (barely any AI)</p>
+                  <p>Year 2030: σ = 0.02 + 0.78 / (1 + e^(4.0)) ≈ <span className="text-emerald-400">0.04</span> (still minimal)</p>
+                  <p>Year 2035: σ = 0.02 + 0.78 / (1 + e^(0)) = <span className="text-emerald-400">0.41</span> (breakthrough!)</p>
+                  <p>Year 2040: σ = 0.02 + 0.78 / (1 + e^(-4.0)) ≈ <span className="text-emerald-400">0.76</span> (rapid adoption)</p>
                 </div>
               </div>
               
@@ -1116,6 +1185,21 @@ effective = raw × Π[y=0 to t-1] efficiency(y)`}
                   <li><strong>σ = 0.5:</strong> AI can do 50% of the work, humans must do rest</li>
                   <li><strong>σ = 1:</strong> AI can fully substitute (limited only by cost/compute)</li>
                 </ul>
+              </div>
+              
+              <div className="bg-zinc-900/50 rounded-lg p-3 border border-zinc-800">
+                <p className="text-zinc-300 font-medium mb-2">Why S-Curve, Not Exponential?</p>
+                <p className="text-xs">
+                  Exponential decay assumes steady progress from day one. But AI often shows: 
+                  "nothing works" → "breakthrough" → "rapid adoption" → "plateau". 
+                  The S-curve lets you set <em>when</em> the breakthrough happens (midpoint) 
+                  and <em>how sudden</em> it is (steepness).
+                </p>
+                <p className="text-xs mt-2 text-amber-400/80">
+                  <strong>Note:</strong> Steepness can also model <em>adoption lag</em>—even if AI capabilities 
+                  arrive suddenly, low steepness captures slow organizational adoption (trust, regulation, 
+                  integration costs).
+                </p>
               </div>
             </div>
           </div>
@@ -1157,21 +1241,21 @@ Total Hours = baseHours × baseline × aiInduced × newTasks`}
 
           {/* 5. Compute Allocation Algorithm */}
           <div className="border-t border-zinc-800 pt-4">
-            <h4 className="text-md font-semibold text-amber-400 mb-3">5. Compute Allocation Algorithm</h4>
+            <h4 className="text-md font-semibold text-amber-400 mb-3">5. Compute Allocation (Uniform-Price Auction)</h4>
             
             <div className="space-y-3 text-sm text-zinc-400">
               <div className="bg-zinc-900/50 rounded-lg p-3 border border-zinc-800">
-                <p className="text-zinc-300 font-medium mb-2">Greedy Value-Maximizing Allocation</p>
+                <p className="text-zinc-300 font-medium mb-2">Market-Clearing Auction</p>
                 <ol className="list-decimal list-inside text-xs space-y-1">
-                  <li>Calculate <code className="text-amber-400">valuePerFlop = tierWage / flopsPerHour</code> for each tier</li>
-                  <li>Sort tiers: cost-effective first, then by valuePerFlop (descending)</li>
-                  <li>For each tier in order:
-                    <ul className="list-disc list-inside ml-4 mt-1">
-                      <li>If NOT cost-effective: allocate 2% × σ (early adopters)</li>
-                      <li>If cost-effective: allocate min(σ limit, compute remaining, human capacity gap)</li>
-                    </ul>
+                  <li>Each tier bids a <strong>reservation price per FLOP</strong>:
+                    <pre className="bg-zinc-950 p-2 rounded text-xs text-emerald-400 mt-1 overflow-x-auto">
+{`reservationPrice = min(tierWage, taskValue) / effectiveFlopsPerHour`}
+                    </pre>
                   </li>
-                  <li>Track binding constraint: <code>cost | compute | substitutability | humanCapacity</code></li>
+                  <li>Sort tiers by reservation price (highest first)</li>
+                  <li>Allocate compute greedily: each tier gets min(σ limit, remaining compute)</li>
+                  <li>The <strong>marginal tier</strong> (last to get allocation) sets the market-clearing price</li>
+                  <li>If compute is abundant (&gt;10% unused), price falls to production cost</li>
                 </ol>
               </div>
               
@@ -1188,34 +1272,45 @@ Total Hours = baseHours × baseline × aiInduced × newTasks`}
                 <p className="text-indigo-300 font-medium mb-2">📝 Example</p>
                 <div className="text-xs space-y-1 font-mono">
                   <p>Available: 10^30 FLOPs/year</p>
-                  <p>Routine: needs 10^28 FLOPs (σ-limited at 80%)</p>
-                  <p>Expert: needs 10^31 FLOPs (σ-limited at 30%)</p>
-                  <p className="mt-2">Allocation order (by value/FLOP): Expert first, Routine second</p>
-                  <p>Expert gets: min(10^31 needed, 10^30 available) = <span className="text-emerald-400">10^30</span></p>
-                  <p>Expert binding: <span className="text-red-400">compute</span></p>
-                  <p>Routine gets: min(10^28 needed, 0 remaining) = <span className="text-emerald-400">0</span></p>
-                  <p>Routine binding: <span className="text-red-400">compute</span> (spillover effect)</p>
+                  <p>Frontier bids: $1000/hr ÷ 10^18 FLOP/hr = <span className="text-emerald-400">$10^-15/FLOP</span></p>
+                  <p>Routine bids: $15/hr ÷ 10^12 FLOP/hr = <span className="text-emerald-400">$1.5×10^-11/FLOP</span></p>
+                  <p className="mt-2">Routine bids higher per-FLOP → served first</p>
+                  <p>If Routine exhausts compute → Frontier gets nothing</p>
+                  <p>Clearing price = marginal tier's reservation price</p>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* 6. Equilibrium Wage Model */}
+          {/* 6. Joint Equilibrium Solver */}
           <div className="border-t border-zinc-800 pt-4">
-            <h4 className="text-md font-semibold text-amber-400 mb-3">6. Equilibrium Wage Model</h4>
+            <h4 className="text-md font-semibold text-amber-400 mb-3">6. Joint Wage-Compute Equilibrium</h4>
             
             <div className="space-y-3 text-sm text-zinc-400">
               <div className="bg-zinc-900/50 rounded-lg p-3 border border-zinc-800">
-                <p className="text-zinc-300 font-medium mb-2">Iterative Solver (5 rounds)</p>
+                <p className="text-zinc-300 font-medium mb-2">Why Iteration?</p>
+                <p className="text-xs mb-2">
+                  Wages affect compute bids (higher wages → higher reservation prices → more compute allocated).
+                  But compute allocation affects wages (more AI → displaced workers → lower wages).
+                  We solve this circular dependency by iterating until convergence.
+                </p>
+              </div>
+              
+              <div className="bg-zinc-900/50 rounded-lg p-3 border border-zinc-800">
+                <p className="text-zinc-300 font-medium mb-2">Convergence Loop (up to 20 iterations, 1% tolerance)</p>
                 <pre className="bg-zinc-950 p-2 rounded text-xs text-emerald-400 overflow-x-auto">
-{`for 5 iterations:
-  1. displaced = AI_share × tier_capacity
-  2. Flow displaced DOWN to lower tiers (weighted by relative wages)
-  3. Voluntary mobility: if lower tier pays > threshold × current wage
-  4. effectiveSupply = baseCapacity - displaced + inflows
-  5. tightness = demand / effectiveSupply
-  6. wage = baseWage × tightness^elasticity
-  7. Cap at taskValue (wage ceiling)`}
+{`wages = baseWages (floor × multiplier)
+repeat until wages converge:
+  1. Run auction with current wages → get AI allocation
+  2. Calculate labor market:
+     - displaced = AI_share × tier_capacity
+     - Flow displaced DOWN to lower tiers
+     - Voluntary mobility if lower tier pays > 80% of current
+     - tightness = demand / effectiveSupply
+     - newWage = baseWage × tightness^elasticity
+     - Cap at taskValue
+  3. Damped update: wages = 0.7 × old + 0.3 × new
+  4. Check convergence: max relative change < 1%`}
                 </pre>
               </div>
               

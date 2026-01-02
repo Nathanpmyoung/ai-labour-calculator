@@ -14,17 +14,18 @@ export interface Parameter {
   tier?: 'routine' | 'standard' | 'complex' | 'expert' | 'frontier';
 }
 
-// Tier configuration type - now with per-tier σ growth, human capability, wages, and equilibrium dynamics
+// Tier configuration type - now with per-tier σ growth (S-curve), human capability, wages, and equilibrium dynamics
 export interface TierConfig {
   id: string;
   name: string;
   color: string;
   defaultFlops: number;
   defaultShare: number;
-  // Per-tier substitutability growth
-  initialSigma: number;  // σ in 2024
-  maxSigma: number;      // Asymptotic σ
-  sigmaHalfLife: number; // Years to close half the gap to maxSigma
+  // Per-tier substitutability growth (S-curve / sigmoid model)
+  initialSigma: number;   // σ in 2024 (starting point)
+  maxSigma: number;       // Asymptotic σ (ceiling)
+  sigmaMidpoint: number;  // Year when σ reaches halfway between initial and max (the "breakthrough" year)
+  sigmaSteepness: number; // How rapid the transition (1=gradual ~5yr, 3=sharp ~2yr, 5=step-like ~1yr)
   // Human labor constraints
   humanCapable: number;  // Fraction of workforce capable of this tier (0-1)
   wageMultiplier: number; // Multiplier on base wage floor for this tier (minimum wage)
@@ -35,33 +36,33 @@ export interface TierConfig {
 }
 
 export const TIER_CONFIGS: TierConfig[] = [
-  // Routine: most workers can do, lowest wages, fast AI progress
+  // Routine: already automatable, rapid adoption curve
   { id: 'routine', name: 'Routine', color: '#22c55e', defaultFlops: 12, defaultShare: 0.25, 
-    initialSigma: 0.10, maxSigma: 1, sigmaHalfLife: 3, 
+    initialSigma: 0.10, maxSigma: 1.0, sigmaMidpoint: 2026, sigmaSteepness: 2, 
     humanCapable: 0.90, wageMultiplier: 1.0, 
     taskValue: 30, wageElasticity: 0.3,
     description: 'Email drafts, simple lookups, form filling' },
-  // Standard: many workers can do, modest wage premium
+  // Standard: breakthrough happening now, moderate transition
   { id: 'standard', name: 'Standard', color: '#3b82f6', defaultFlops: 14, defaultShare: 0.35, 
-    initialSigma: 0.10, maxSigma: 0.98, sigmaHalfLife: 4, 
+    initialSigma: 0.10, maxSigma: 0.98, sigmaMidpoint: 2027, sigmaSteepness: 1.5, 
     humanCapable: 0.65, wageMultiplier: 1.5,
     taskValue: 60, wageElasticity: 0.5,
     description: 'Document summarization, code review, data analysis' },
-  // Complex: fewer workers, higher wages, slower AI progress
+  // Complex: breakthrough expected late 2020s
   { id: 'complex', name: 'Complex', color: '#a855f7', defaultFlops: 16, defaultShare: 0.25, 
-    initialSigma: 0.05, maxSigma: 0.95, sigmaHalfLife: 5, 
+    initialSigma: 0.05, maxSigma: 0.95, sigmaMidpoint: 2029, sigmaSteepness: 1.2, 
     humanCapable: 0.35, wageMultiplier: 2.5,
     taskValue: 150, wageElasticity: 0.8,
     description: 'Multi-step research, strategic planning' },
-  // Expert: scarce workers, high wages, slow AI progress
+  // Expert: breakthrough expected early 2030s
   { id: 'expert', name: 'Expert', color: '#f97316', defaultFlops: 18, defaultShare: 0.12, 
-    initialSigma: 0.05, maxSigma: 0.90, sigmaHalfLife: 5, 
+    initialSigma: 0.05, maxSigma: 0.90, sigmaMidpoint: 2032, sigmaSteepness: 1.0, 
     humanCapable: 0.12, wageMultiplier: 5.0,
     taskValue: 400, wageElasticity: 1.2,
     description: 'Novel research, high-stakes decisions' },
-  // Frontier: very rare workers, very high wages, slowest AI progress
+  // Frontier: breakthrough uncertain, mid-2030s if at all
   { id: 'frontier', name: 'Frontier', color: '#ef4444', defaultFlops: 20, defaultShare: 0.03, 
-    initialSigma: 0.02, maxSigma: 0.80, sigmaHalfLife: 6, 
+    initialSigma: 0.02, maxSigma: 0.80, sigmaMidpoint: 2035, sigmaSteepness: 0.8, 
     humanCapable: 0.03, wageMultiplier: 10.0,
     taskValue: 1000, wageElasticity: 1.5,
     description: 'Breakthrough innovation, trust-critical' },
@@ -311,14 +312,27 @@ export const parameters: Parameter[] = [
       tier: tier.id as 'routine' | 'standard' | 'complex' | 'expert' | 'frontier',
     },
     {
-      id: `tier_${tier.id}_sigmaHalfLife`,
-      label: `${tier.name}: σ Half-Life`,
-      description: `Years to close half the gap between initial and max σ. Lower = faster AI progress.`,
-      default: tier.sigmaHalfLife,
-      min: 1,
-      max: 30,
+      id: `tier_${tier.id}_sigmaMidpoint`,
+      label: `${tier.name}: σ Midpoint`,
+      description: `Year when σ reaches halfway between initial and max (the "breakthrough" year). Earlier = faster AI progress.`,
+      default: tier.sigmaMidpoint,
+      min: 2024,
+      max: 2050,
       step: 1,
-      unit: 'years',
+      unit: '',
+      format: 'number' as const,
+      group: 'tiers' as const,
+      tier: tier.id as 'routine' | 'standard' | 'complex' | 'expert' | 'frontier',
+    },
+    {
+      id: `tier_${tier.id}_sigmaSteepness`,
+      label: `${tier.name}: σ Steepness`,
+      description: `How rapid the S-curve transition. 1=gradual (~5yr spread), 3=sharp (~2yr), 5=step-like (~1yr).`,
+      default: tier.sigmaSteepness,
+      min: 0.3,
+      max: 5,
+      step: 0.1,
+      unit: '',
       format: 'number' as const,
       group: 'tiers' as const,
       tier: tier.id as 'routine' | 'standard' | 'complex' | 'expert' | 'frontier',

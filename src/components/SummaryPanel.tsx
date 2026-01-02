@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { ModelOutputs } from '../models/computeModel';
 import type { ParameterValues } from '../models/parameters';
 import { TierBreakdownCompact } from './TierBreakdown';
@@ -8,6 +9,7 @@ interface SummaryPanelProps {
 }
 
 export function SummaryPanel({ outputs, params }: SummaryPanelProps) {
+  const [unmetExpanded, setUnmetExpanded] = useState(false);
   const targetProjection = outputs.projections.find(p => p.year === params.year);
   
   if (!targetProjection) return null;
@@ -230,21 +232,72 @@ export function SummaryPanel({ outputs, params }: SummaryPanelProps) {
       {/* Unmet demand warning */}
       {targetProjection.totalUnmetHours > 0 && (
         <div className="mb-5 p-3 bg-red-950/30 border border-red-900/50 rounded-lg">
-          <div className="flex items-center justify-between">
-            <span className="text-xs uppercase tracking-wider text-red-400">
-              ⚠️ Unmet Demand
-            </span>
-            <span className="text-sm font-semibold text-red-300">
-              {formatHours(targetProjection.totalUnmetHours)} hrs/yr
-              <span className="text-red-500 ml-2">
-                ({(targetProjection.unmetTaskShare * 100).toFixed(1)}% of demand)
+          <button 
+            className="w-full text-left"
+            onClick={() => setUnmetExpanded(!unmetExpanded)}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs uppercase tracking-wider text-red-400">
+                ⚠️ Unmet Demand
+                <span className="ml-2 text-zinc-500">{unmetExpanded ? '▼' : '▶'}</span>
               </span>
-            </span>
-          </div>
+              <span className="text-sm font-semibold text-red-300">
+                {formatHours(targetProjection.totalUnmetHours)} hrs/yr
+                <span className="text-red-500 ml-2">
+                  ({(targetProjection.unmetTaskShare * 100).toFixed(1)}% of demand)
+                </span>
+              </span>
+            </div>
+          </button>
           <p className="text-xs text-zinc-400 mt-2">
-            This work couldn't be done: human capacity was exhausted AND AI was too expensive.
-            Wages are at ceiling for affected tiers.
+            {binding === 'substitutability' 
+              ? "This work couldn't be done: AI can only substitute up to σ (substitutability limit), and there aren't enough humans for the rest."
+              : binding === 'compute'
+              ? "This work couldn't be done: not enough compute for AI, and human capacity was exhausted."
+              : binding === 'cost'
+              ? "This work couldn't be done: AI was too expensive at current prices, and human capacity was exhausted."
+              : "This work couldn't be done: human capacity was exhausted and AI couldn't fill the gap."}
           </p>
+          
+          {/* Expandable tier breakdown */}
+          {unmetExpanded && (
+            <div className="mt-3 pt-3 border-t border-red-900/30 space-y-2">
+              <p className="text-xs text-zinc-500 mb-2">Unmet demand by tier:</p>
+              {targetProjection.tierAllocations
+                .filter(ta => ta.hoursUnmet > 0)
+                .sort((a, b) => b.hoursUnmet - a.hoursUnmet)
+                .map(ta => {
+                  const tierTotal = ta.hoursAI + ta.hoursHuman + ta.hoursUnmet;
+                  const unmetPct = tierTotal > 0 ? (ta.hoursUnmet / tierTotal) * 100 : 0;
+                  return (
+                    <div key={ta.tier.id} className="flex items-center gap-2">
+                      <div 
+                        className="w-2 h-2 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: ta.tier.color }}
+                      />
+                      <span className="text-xs text-zinc-300 w-20">{ta.tier.name}</span>
+                      <div className="flex-1 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-red-500/70 rounded-full"
+                          style={{ width: `${Math.min(100, unmetPct)}%` }}
+                        />
+                      </div>
+                      <span className="text-xs text-red-400 w-24 text-right">
+                        {formatHours(ta.hoursUnmet)} ({unmetPct.toFixed(0)}%)
+                      </span>
+                      <span className="text-xs text-zinc-500 w-24">
+                        {ta.bindingConstraint === 'substitutability' ? 'σ limit' 
+                          : ta.bindingConstraint === 'humanCapacity' ? 'no humans'
+                          : ta.bindingConstraint}
+                      </span>
+                    </div>
+                  );
+                })}
+              {targetProjection.tierAllocations.filter(ta => ta.hoursUnmet > 0).length === 0 && (
+                <p className="text-xs text-zinc-500 italic">No tier-level unmet demand</p>
+              )}
+            </div>
+          )}
         </div>
       )}
       

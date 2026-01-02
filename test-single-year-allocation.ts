@@ -1,6 +1,6 @@
 /**
- * Focused test for LP allocation at a single year
- * Run with: npx tsx test-single-year.ts
+ * Focused test for market-clearing allocation at a single year
+ * Run with: npx tsx test-single-year-allocation.ts
  */
 
 import { getDefaultValues } from './src/models/parameters';

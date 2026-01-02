@@ -202,7 +202,7 @@ const TAB_CONFIG: { id: ParamTab; label: string; icon: string; color: string; de
   { id: 'compute', label: 'Compute', icon: '⚡', color: 'text-amber-400' },
   { id: 'demand', label: 'Demand', icon: '📈', color: 'text-emerald-400', description: 'Total work is NOT fixed. Cheaper AI → more gets done (Jevons paradox). New AI capabilities create tasks that didn\'t exist.' },
   { id: 'economic', label: 'Costs', icon: '💰', color: 'text-blue-400' },
-  { id: 'tiers', label: 'Tiers', icon: '📋', color: 'text-pink-400', description: 'Configure each tier: FLOPs, work share, σ (substitutability: start, max, half-life), human capability %, and wage multiplier.' },
+  { id: 'tiers', label: 'Tiers', icon: '📋', color: 'text-pink-400', description: 'Configure each tier: FLOPs, work share, σ (substitutability: start, max, midpoint year, steepness), human capability %, and wage multiplier.' },
 ];
 
 export function ParameterControls({ values, onChange, onReset }: ParameterControlsProps) {

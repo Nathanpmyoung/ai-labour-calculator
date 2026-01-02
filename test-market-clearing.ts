@@ -1,6 +1,6 @@
 /**
- * Test script for LP allocation
- * Run with: npx tsx test-lp-allocation.ts
+ * Test script for market-clearing allocation
+ * Run with: npx tsx test-market-clearing.ts
  */
 
 import { getDefaultValues } from './src/models/parameters';
@@ -15,7 +15,7 @@ params.computeGrowthRate = 0.3;   // Slower growth
 params.tier_frontier_flops = 22;  // Frontier at 10^22 FLOPs/hr
 params.year = 2024;               // Test year 2024 specifically
 
-console.log('\n=== LP ALLOCATION TEST ===\n');
+console.log('\n=== MARKET-CLEARING ALLOCATION TEST ===\n');
 console.log('Scenario: Compute constrained with Frontier FLOPs = 10^22');
 console.log('Year:', params.year);
 console.log('Base Compute:', `10^${params.baseComputeExponent} FLOP/s`);

@@ -14,15 +14,12 @@
 
 import type { ParameterValues } from './parameters';
 import { TIER_CONFIGS } from './parameters';
-// @ts-ignore - javascript-lp-solver doesn't have TypeScript types
-import solver from 'javascript-lp-solver';
 
 /**
- * LP Solver types (javascript-lp-solver)
- *
- * Note: The current allocation logic uses a market-clearing auction (not an LP),
- * but we keep these types/import around for potential future work and backwards
- * compatibility with older experiments.
+ * Legacy result type (originally from javascript-lp-solver).
+ * 
+ * The current allocation uses a market-clearing auction, not an LP solver.
+ * We keep this type for compatibility with downstream code that reads allocation results.
  */
 interface LPResult {
   feasible: boolean;
@@ -64,7 +61,8 @@ export interface TaskTier {
   shareOfCognitive: number;      // What fraction of cognitive hours is this tier?
   initialSigma: number;          // σ in 2024 for this tier
   maxSigma: number;              // Asymptotic σ this tier can reach
-  sigmaHalfLife: number;         // Years to close half the gap to maxSigma
+  sigmaMidpoint: number;         // Year when σ reaches halfway (the "breakthrough" year)
+  sigmaSteepness: number;        // How rapid the transition (1=gradual, 3=sharp)
   humanCapable: number;          // Fraction of workforce capable of this tier (0-1)
   wageMultiplier: number;        // Minimum wage multiplier vs base floor for this tier
   taskValue: number;             // Max $/hr employers will pay (wage ceiling)
@@ -86,7 +84,8 @@ export function buildTaskTiers(params: ParameterValues): TaskTier[] {
     shareOfCognitive: params[`tier_${config.id}_share`] ?? config.defaultShare,
     initialSigma: params[`tier_${config.id}_initialSigma`] ?? config.initialSigma,
     maxSigma: params[`tier_${config.id}_maxSigma`] ?? config.maxSigma,
-    sigmaHalfLife: params[`tier_${config.id}_sigmaHalfLife`] ?? config.sigmaHalfLife,
+    sigmaMidpoint: params[`tier_${config.id}_sigmaMidpoint`] ?? config.sigmaMidpoint,
+    sigmaSteepness: params[`tier_${config.id}_sigmaSteepness`] ?? config.sigmaSteepness,
     humanCapable: params[`tier_${config.id}_humanCapable`] ?? config.humanCapable,
     wageMultiplier: params[`tier_${config.id}_wageMultiplier`] ?? config.wageMultiplier,
     taskValue: params[`tier_${config.id}_taskValue`] ?? config.taskValue,
@@ -118,7 +117,8 @@ export const DEFAULT_TASK_TIERS: TaskTier[] = TIER_CONFIGS.map(config => ({
   shareOfCognitive: config.defaultShare,
   initialSigma: config.initialSigma,
   maxSigma: config.maxSigma,
-  sigmaHalfLife: config.sigmaHalfLife,
+  sigmaMidpoint: config.sigmaMidpoint,
+  sigmaSteepness: config.sigmaSteepness,
   humanCapable: config.humanCapable,
   wageMultiplier: config.wageMultiplier,
   taskValue: config.taskValue,
@@ -204,21 +204,26 @@ export interface ModelOutputs {
 }
 
 /**
- * Calculate time-varying substitutability for a tier
- * Each tier grows from its initialSigma toward its maxSigma
- * Uses exponential decay toward asymptote: σ(t) = σ_max - (σ_max - σ_0) × e^(-t/τ)
- * where τ = halfLife / ln(2)
+ * Calculate time-varying substitutability for a tier using S-curve (sigmoid) growth
+ * 
+ * This models AI capability breakthroughs more realistically than exponential decay:
+ * - Slow start: AI hasn't figured out this tier yet
+ * - Rapid middle: breakthrough → adoption  
+ * - Plateau: physical/social limits reached
+ * 
+ * Formula: σ(year) = initial + (max - initial) / (1 + e^(-steepness × (year - midpoint)))
  */
 function calculateTierSubstitutability(
   initialSigma: number,
   maxSigma: number,
-  halfLife: number,
-  yearsFromBase: number
+  midpointYear: number,
+  steepness: number,
+  currentYear: number
 ): number {
-  if (yearsFromBase <= 0) return initialSigma;
-  
-  const tau = halfLife / Math.log(2);
-  const sigma = maxSigma - (maxSigma - initialSigma) * Math.exp(-yearsFromBase / tau);
+  // Sigmoid function: σ = initial + (max - initial) / (1 + e^(-k(t - midpoint)))
+  const range = maxSigma - initialSigma;
+  const exponent = -steepness * (currentYear - midpointYear);
+  const sigma = initialSigma + range / (1 + Math.exp(exponent));
   
   return Math.min(Math.max(sigma, 0), 1);
 }
@@ -914,14 +919,15 @@ export function runModel(params: ParameterValues): ModelOutputs {
   for (let year = BASE_YEAR; year <= endYear; year++) {
     const yearsFromBase = year - BASE_YEAR;
     
-    // Calculate per-tier substitutability for this year
-    // Each tier has its own half-life for growth toward its maxSigma
+    // Calculate per-tier substitutability for this year (S-curve model)
+    // Each tier has its own midpoint year (breakthrough) and steepness
     const tierSigmaArray = taskTiers.map(tier => 
       calculateTierSubstitutability(
         tier.initialSigma,
         tier.maxSigma,
-        tier.sigmaHalfLife,
-        yearsFromBase
+        tier.sigmaMidpoint,
+        tier.sigmaSteepness,
+        year
       )
     );
     

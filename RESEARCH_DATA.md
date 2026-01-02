@@ -95,14 +95,29 @@ Based on this research, the default parameters are:
 
 ```
 BASE_YEAR = 2024
-BASE_INFERENCE_COMPUTE = 5e21  // FLOP/s globally available
-COMPUTE_GROWTH_RATE = 0.5     // 50% per year (conservative)
-EFFICIENCY_IMPROVEMENT = 1.4   // ~40% improvement per year (conservative)
-SUBSTITUTABILITY = 0.7         // 0 = complements, 1 = perfect substitutes
-HUMAN_WAGE_FLOOR = 15         // USD/hour
-TOTAL_HUMAN_WORK_HOURS = 3e11 // 300 billion hours/year
-AVERAGE_HUMAN_WAGE = 20       // USD/hour global average
-FLOPS_PER_COGNITIVE_HOUR = 1e15 // FLOPs for one "hour" of AI cognitive work
+BASE_INFERENCE_COMPUTE = 10^21.7  // ~5×10^21 FLOP/s globally (Epoch AI)
+COMPUTE_GROWTH_RATE = 1.0         // 100% per year (2× annually)
+EFFICIENCY_IMPROVEMENT = 2.0       // 2× per year (Epoch AI)
+AI_UTILIZATION = 0.30              // 30% of compute goes to cognitive work
+HUMAN_WAGE_FLOOR = 15              // USD/hour
+
+// Per-tier substitutability (σ): S-curve model (initial → max, midpoint year, steepness)
+ROUTINE:   10% → 100%, midpoint 2026, steepness 2.0
+STANDARD:  10% → 98%, midpoint 2027, steepness 1.5
+COMPLEX:   5% → 95%, midpoint 2029, steepness 1.2
+EXPERT:    5% → 90%, midpoint 2032, steepness 1.0
+FRONTIER:  2% → 80%, midpoint 2035, steepness 0.8
+
+// Demand dynamics
+BASELINE_DEMAND_GROWTH = 0.03      // 3%/year
+DEMAND_ELASTICITY = 0.5            // Log-based Jevons coefficient
+NEW_TASK_CREATION_RATE = 0.1       // 10% of σ growth → new work
+
+// Labor (ILO/McKinsey)
+GLOBAL_WORKFORCE = 3.4e9           // 3.4 billion workers
+HOURS_PER_WORKER = 1800            // ~1,800 hours/year
+COGNITIVE_SHARE = 0.40             // 40% of work is cognitive
+// → ~2.4 trillion cognitive hours/year
 ```
 
 ### References

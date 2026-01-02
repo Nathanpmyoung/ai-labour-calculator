@@ -1,5 +1,5 @@
 /**
- * Deep debug of LP allocation
+ * Deep debug of market-clearing allocation
  */
 
 import { getDefaultValues } from './src/models/parameters';

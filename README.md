@@ -19,7 +19,7 @@ This calculator lets you adjust assumptions and see how they affect human wages,
 - **Dynamic Demand:** Total work grows with GDP, AI-induced demand (Jevons paradox), and new task creation
 - **Human Capacity Constraints:** Per-tier limits on what fraction of the workforce can perform each task type
 - **Equilibrium Wages:** Market-clearing wages per tier based on supply/demand with inter-tier mobility
-- **Value-Maximizing Allocation:** Compute allocated to tasks with highest economic value per FLOP
+- **Market-Clearing Allocation:** Uniform-price auction allocates scarce compute to highest bidders
 
 ### Tabs
 
@@ -74,20 +74,21 @@ To enable:
 | Algorithmic Efficiency | Annual efficiency multiplier | 2x/year |
 | AI Utilization | Fraction of compute for cognitive work | 30% |
 
-### Substitutability (σ)
+### Substitutability (σ) — S-Curve Model
 Each tier has independent parameters:
 | Parameter | Description |
 |-----------|-------------|
 | Initial σ | Starting substitutability (0 = complements, 1 = perfect substitutes) |
 | Max σ | Asymptotic limit |
-| σ Half-Life | Years to reach halfway to max |
+| σ Midpoint | Year when σ reaches halfway (the "breakthrough" year) |
+| σ Steepness | How rapid the transition (1=gradual ~5yr, 3=sharp ~2yr). Also proxies for adoption lag. |
 
 ### Demand
 | Parameter | Description | Default |
 |-----------|-------------|---------|
-| Baseline Demand Growth | Annual growth in work demand | 2%/year |
-| Demand Elasticity | How much demand rises as AI cost falls | 0.3 |
-| New Task Creation | Rate AI enables entirely new work | 0.05 |
+| Baseline Demand Growth | Annual growth in work demand | 3%/year |
+| Demand Elasticity | How much demand rises as AI cost falls (log-based) | 0.5 |
+| New Task Creation | Rate AI enables entirely new work | 0.1 |
 
 ### Per-Tier Settings
 | Parameter | Description |
