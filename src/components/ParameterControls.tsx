@@ -199,10 +199,10 @@ function TierParamRow({
 type ParamTab = 'compute' | 'demand' | 'economic' | 'tiers';
 
 const TAB_CONFIG: { id: ParamTab; label: string; icon: string; color: string; description?: string }[] = [
-  { id: 'compute', label: 'Compute', icon: '⚡', color: 'text-amber-400' },
-  { id: 'demand', label: 'Demand', icon: '📈', color: 'text-emerald-400', description: 'Total work is NOT fixed. Cheaper AI → more gets done (Jevons paradox). New AI capabilities create tasks that didn\'t exist.' },
+  { id: 'compute', label: 'Compute Supply', icon: '⚡', color: 'text-amber-400' },
+  { id: 'demand', label: 'Labour Demand', icon: '📈', color: 'text-emerald-400', description: 'Total work is NOT fixed. Cheaper AI → more gets done (Jevons paradox). New AI capabilities create tasks that didn\'t exist.' },
   { id: 'economic', label: 'Costs', icon: '💰', color: 'text-blue-400' },
-  { id: 'tiers', label: 'Tiers', icon: '📋', color: 'text-pink-400', description: 'Configure each tier: FLOPs, work share, σ (substitutability: start, max, midpoint year, steepness), human capability %, and wage multiplier.' },
+  { id: 'tiers', label: 'Task Types', icon: '📋', color: 'text-pink-400', description: 'Configure each tier: FLOPs, work share, σ (substitutability: start, max, midpoint year, steepness), human capability %, and wage multiplier.' },
 ];
 
 export function ParameterControls({ values, onChange, onReset }: ParameterControlsProps) {
@@ -218,8 +218,8 @@ export function ParameterControls({ values, onChange, onReset }: ParameterContro
     return map;
   }, [values]);
   
-  // Group parameters by category
-  const computeParams = parameters.filter(p => p.group === 'compute');
+  // Group parameters by category (exclude 'year' - it has its own slider above tabs)
+  const computeParams = parameters.filter(p => p.group === 'compute' && p.id !== 'year');
   const economicParams = parameters.filter(p => p.group === 'economic');
   const demandParams = parameters.filter(p => p.group === 'demand');
   const tierParams = parameters.filter(p => p.group === 'tiers');

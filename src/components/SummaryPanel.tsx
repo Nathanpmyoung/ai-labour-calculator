@@ -2,6 +2,8 @@ import { useState } from 'react';
 import type { ModelOutputs } from '../models/computeModel';
 import type { ParameterValues } from '../models/parameters';
 import { TierBreakdownCompact } from './TierBreakdown';
+import { HumanEmploymentCharts } from './HumanEmploymentCharts';
+import { Collapsible } from './Collapsible';
 
 interface SummaryPanelProps {
   outputs: ModelOutputs;
@@ -107,19 +109,14 @@ export function SummaryPanel({ outputs, params }: SummaryPanelProps) {
         
         <div className="p-4 bg-zinc-900/50 rounded-lg">
           <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">
-            Avg AI Cost/Hour {hasScarcityPremium && <span className="text-amber-500">(Market)</span>}
+            Human Employment vs 2024
           </p>
-          <p className="text-xl font-semibold text-amber-400">
-            {formatCurrency(avgAICost)}
+          <p className={`text-xl font-semibold ${humanHoursChange >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+            {((targetProjection.totalHumanHours / baselineHumanHours) * 100).toFixed(0)}%
           </p>
-          {hasScarcityPremium && (
-            <p className="text-xs text-zinc-500 mt-1">
-              Base: {formatCurrency(avgProductionCost)} 
-              <span className="text-amber-500 ml-1">
-                ({scarcityPremium.toFixed(1)}× premium)
-              </span>
-            </p>
-          )}
+          <p className="text-xs text-zinc-500 mt-1">
+            {humanHoursChange >= 0 ? '+' : ''}{humanHoursChange.toFixed(0)}% from baseline
+          </p>
         </div>
         
         <div className="p-4 bg-zinc-900/50 rounded-lg">
@@ -400,6 +397,35 @@ export function SummaryPanel({ outputs, params }: SummaryPanelProps) {
               tiersByConstraint[ta.bindingConstraint]++;
             });
             
+            const overallAIShare = targetProjection.aiTaskShare;
+            const overallHumanShare = targetProjection.humanTaskShare;
+            
+            // Check for near-total AI takeover first
+            if (overallAIShare >= 0.95) {
+              return (
+                <>
+                  <strong className="text-red-300">Near-total AI automation.</strong>{' '}
+                  AI handles {(overallAIShare * 100).toFixed(0)}% of cognitive work across all tiers.
+                  Human labor has been almost entirely displaced in this scenario.
+                </>
+              );
+            }
+            
+            // Check for near-total human retention
+            if (overallHumanShare >= 0.80) {
+              return (
+                <>
+                  <strong className="text-emerald-300">Humans retain most work.</strong>{' '}
+                  Despite AI availability, {(overallHumanShare * 100).toFixed(0)}% of cognitive work remains human.
+                  {tiersByConstraint.substitutability >= 2 
+                    ? ' Substitutability limits prevent full AI adoption.'
+                    : tiersByConstraint.cost >= 2 
+                    ? ' AI remains too expensive for widespread adoption.'
+                    : ' Current constraints favor human labor.'}
+                </>
+              );
+            }
+            
             if (tiersByConstraint.humanCapacity >= 2) {
               return (
                 <>
@@ -426,20 +452,43 @@ export function SummaryPanel({ outputs, params }: SummaryPanelProps) {
                   As costs decline, expect more AI adoption.
                 </>
               );
-            } else {
+            } else if (tiersByConstraint.substitutability >= 2) {
               const routineTier = targetProjection.tierAllocations[0];
-              const expertTier = targetProjection.tierAllocations[3];
+              const frontierTier = targetProjection.tierAllocations[4];
               return (
                 <>
-                  <strong className="text-emerald-300">Stratified automation pattern.</strong>{' '}
-                  Routine tasks are {(routineTier.aiShare * 100).toFixed(0)}% AI-automated, 
-                  while expert tasks remain {(expertTier.humanShare * 100).toFixed(0)}% human.
-                  Substitutability limits AI even where compute is abundant.
+                  <strong className="text-purple-300">Substitutability is the key constraint.</strong>{' '}
+                  AI could do more, but σ limits adoption. Routine tasks at {(routineTier.aiShare * 100).toFixed(0)}% AI,
+                  Frontier at {(frontierTier.aiShare * 100).toFixed(0)}% AI.
+                </>
+              );
+            } else {
+              // Mixed constraints - show the spread
+              const routineTier = targetProjection.tierAllocations[0];
+              const frontierTier = targetProjection.tierAllocations[4];
+              return (
+                <>
+                  <strong className="text-emerald-300">Mixed automation pattern.</strong>{' '}
+                  Different constraints bind different tiers. Routine tasks at {(routineTier.aiShare * 100).toFixed(0)}% AI,
+                  Frontier at {(frontierTier.aiShare * 100).toFixed(0)}% AI.
                 </>
               );
             }
           })()}
         </p>
+      </div>
+      
+      {/* Human Employment Charts */}
+      <div className="mt-6 pt-6 border-t border-zinc-800">
+        <Collapsible 
+          title="Human Employment Over Time" 
+          defaultOpen={false}
+        >
+          <HumanEmploymentCharts 
+            projections={outputs.projections} 
+            targetYear={params.year} 
+          />
+        </Collapsible>
       </div>
     </div>
   );

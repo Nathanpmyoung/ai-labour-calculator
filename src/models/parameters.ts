@@ -26,6 +26,7 @@ export interface TierConfig {
   maxSigma: number;       // Asymptotic σ (ceiling)
   sigmaMidpoint: number;  // Year when σ reaches halfway between initial and max (the "breakthrough" year)
   sigmaSteepness: number; // How rapid the transition (1=gradual ~5yr, 3=sharp ~2yr, 5=step-like ~1yr)
+  deploymentLag: number;  // Years between "AI can do it" and "AI is doing it" (adoption delay)
   // Human labor constraints
   humanCapable: number;  // Fraction of workforce capable of this tier (0-1)
   wageMultiplier: number; // Multiplier on base wage floor for this tier (minimum wage)
@@ -36,34 +37,39 @@ export interface TierConfig {
 }
 
 export const TIER_CONFIGS: TierConfig[] = [
-  // Routine: already automatable, rapid adoption curve
-  { id: 'routine', name: 'Routine', color: '#22c55e', defaultFlops: 12, defaultShare: 0.25, 
-    initialSigma: 0.10, maxSigma: 1.0, sigmaMidpoint: 2026, sigmaSteepness: 2, 
+  // Routine: multiple model calls per "hour of work", context handling, verification
+  // +3 OOM from original to reflect realistic inference costs
+  { id: 'routine', name: 'Routine', color: '#22c55e', defaultFlops: 15, defaultShare: 0.25, 
+    initialSigma: 0.10, maxSigma: 1.0, sigmaMidpoint: 2026, sigmaSteepness: 2, deploymentLag: 2,
     humanCapable: 0.90, wageMultiplier: 1.0, 
     taskValue: 30, wageElasticity: 0.3,
     description: 'Email drafts, simple lookups, form filling' },
-  // Standard: breakthrough happening now, moderate transition
-  { id: 'standard', name: 'Standard', color: '#3b82f6', defaultFlops: 14, defaultShare: 0.35, 
-    initialSigma: 0.10, maxSigma: 0.98, sigmaMidpoint: 2027, sigmaSteepness: 1.5, 
+  // Standard: extended reasoning chains, larger contexts
+  // +3 OOM from original
+  { id: 'standard', name: 'Standard', color: '#3b82f6', defaultFlops: 17, defaultShare: 0.35, 
+    initialSigma: 0.10, maxSigma: 0.98, sigmaMidpoint: 2027, sigmaSteepness: 1.5, deploymentLag: 2,
     humanCapable: 0.65, wageMultiplier: 1.5,
     taskValue: 60, wageElasticity: 0.5,
     description: 'Document summarization, code review, data analysis' },
-  // Complex: breakthrough expected late 2020s
-  { id: 'complex', name: 'Complex', color: '#a855f7', defaultFlops: 16, defaultShare: 0.25, 
-    initialSigma: 0.05, maxSigma: 0.95, sigmaMidpoint: 2029, sigmaSteepness: 1.2, 
-    humanCapable: 0.35, wageMultiplier: 2.5,
+  // Complex: multi-step analysis, iteration, verification loops
+  // +2 OOM from original
+  { id: 'complex', name: 'Complex', color: '#a855f7', defaultFlops: 18, defaultShare: 0.25, 
+    initialSigma: 0.05, maxSigma: 0.95, sigmaMidpoint: 2029, sigmaSteepness: 1.2, deploymentLag: 2,
+    humanCapable: 0.35, wageMultiplier: 2,
     taskValue: 150, wageElasticity: 0.8,
     description: 'Multi-step research, strategic planning' },
-  // Expert: breakthrough expected early 2030s
-  { id: 'expert', name: 'Expert', color: '#f97316', defaultFlops: 18, defaultShare: 0.12, 
-    initialSigma: 0.05, maxSigma: 0.90, sigmaMidpoint: 2032, sigmaSteepness: 1.0, 
-    humanCapable: 0.12, wageMultiplier: 5.0,
+  // Expert: sophisticated reasoning, frontier model capability
+  // +1 OOM from original
+  { id: 'expert', name: 'Expert', color: '#f97316', defaultFlops: 19, defaultShare: 0.12, 
+    initialSigma: 0.05, maxSigma: 0.90, sigmaMidpoint: 2032, sigmaSteepness: 1.0, deploymentLag: 1,
+    humanCapable: 0.12, wageMultiplier: 3.0,
     taskValue: 400, wageElasticity: 1.2,
     description: 'Novel research, high-stakes decisions' },
-  // Frontier: breakthrough uncertain, mid-2030s if at all
-  { id: 'frontier', name: 'Frontier', color: '#ef4444', defaultFlops: 20, defaultShare: 0.03, 
-    initialSigma: 0.02, maxSigma: 0.80, sigmaMidpoint: 2035, sigmaSteepness: 0.8, 
-    humanCapable: 0.03, wageMultiplier: 10.0,
+  // Frontier: cutting-edge capability, beyond current SOTA
+  // +1 OOM from original
+  { id: 'frontier', name: 'Frontier', color: '#ef4444', defaultFlops: 21, defaultShare: 0.03, 
+    initialSigma: 0.02, maxSigma: 0.80, sigmaMidpoint: 2035, sigmaSteepness: 0.8, deploymentLag: 1,
+    humanCapable: 0.03, wageMultiplier: 6.0,
     taskValue: 1000, wageElasticity: 1.5,
     description: 'Breakthrough innovation, trust-critical' },
 ];
@@ -100,7 +106,7 @@ export const parameters: Parameter[] = [
     id: 'computeGrowthRate',
     label: 'Annual Compute Growth',
     description: 'Rate at which global AI inference capacity grows per year. Historical: 2-3x/year.',
-    default: 1.0, // 100%/year = 2x/year, based on Epoch AI data
+    default: 1, // 100%/year = 2x/year, based on Epoch AI data
     min: 0.2,
     max: 3.0,
     step: 0.1,
@@ -112,7 +118,7 @@ export const parameters: Parameter[] = [
     id: 'computeGrowthDecay',
     label: 'Compute Growth Slowdown',
     description: 'How much compute growth rate declines per year. 0.05 = growth rate is 5% lower each year (Moore\'s Law slowdown).',
-    default: 0.05, // Modest slowdown - growth slows over time
+    default: 0.1, // Modest slowdown - growth slows over time
     min: 0,
     max: 0.20,
     step: 0.01,
@@ -136,9 +142,9 @@ export const parameters: Parameter[] = [
     id: 'efficiencyDecay',
     label: 'Efficiency Gain Slowdown',
     description: 'How much algorithmic efficiency gains decline per year. 0.08 = 8% slower each year (low-hanging fruit gets picked).',
-    default: 0.08, // Faster slowdown than hardware - algorithmic gains harder over time
+    default: 0.15, // Faster slowdown than hardware - algorithmic gains harder over time
     min: 0,
-    max: 0.20,
+    max: 0.30,
     step: 0.01,
     unit: '/year',
     format: 'percent',
@@ -333,6 +339,19 @@ export const parameters: Parameter[] = [
       max: 5,
       step: 0.1,
       unit: '',
+      format: 'number' as const,
+      group: 'tiers' as const,
+      tier: tier.id as 'routine' | 'standard' | 'complex' | 'expert' | 'frontier',
+    },
+    {
+      id: `tier_${tier.id}_deploymentLag`,
+      label: `${tier.name}: Deployment Lag`,
+      description: `Years between "AI can do it" and "AI is doing it" (adoption/regulatory/integration delay)`,
+      default: tier.deploymentLag,
+      min: 0,
+      max: 10,
+      step: 0.5,
+      unit: 'yr',
       format: 'number' as const,
       group: 'tiers' as const,
       tier: tier.id as 'routine' | 'standard' | 'complex' | 'expert' | 'frontier',

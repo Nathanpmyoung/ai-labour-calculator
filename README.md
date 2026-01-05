@@ -70,7 +70,7 @@ To enable:
 |-----------|-------------|---------|
 | Base Compute (2024) | Global AI inference capacity | 10^21.7 FLOP/s |
 | Compute Growth | Annual capacity growth | 100%/year |
-| Growth Slowdown | How much growth declines per year | 5%/year |
+| Growth Slowdown | How much growth declines per year | 10%/year |
 | Algorithmic Efficiency | Annual efficiency multiplier | 2x/year |
 | AI Utilization | Fraction of compute for cognitive work | 30% |
 

@@ -22,6 +22,7 @@ const ONBOARDING_KEY = 'ai-compute-onboarding-complete';
 function App() {
   const [params, setParams] = useState<ParameterValues>(getDefaultValues());
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [savedParams, setSavedParams] = useState<ParameterValues | null>(null);
   
   // Check localStorage on mount to show onboarding for first-time visitors
   useEffect(() => {
@@ -135,20 +136,20 @@ This reflects views that transformative AI is imminent and that economic pressur
       name: 'Compute Constrained',
       color: 'amber',
       description: 'Higher compute requirements per task make capacity the bottleneck',
-      explanation: `This scenario assumes AI tasks require significantly more compute than default estimates—perhaps because real-world deployment needs much more inference than benchmarks suggest, or because achieving reliability requires expensive ensembling and verification.
+      explanation: `This scenario assumes AI tasks require even more compute than the (already realistic) default estimates—perhaps because real-world deployment needs extensive verification, or because frontier tasks require truly massive inference budgets.
 
 Key assumptions:
-• All tier FLOPs requirements increased by ~100x (e.g., routine: 10^15 → 10^17)
+• All tier FLOPs requirements increased by ~100x beyond defaults (e.g., routine: 10^15 → 10^18)
 • Compute growth slowed to 50%/year (vs. 100% default)—supply chain constraints, energy limits
 • Faster growth decay (8%/year)—exponential growth can't continue indefinitely
 
 This makes raw compute capacity the binding constraint rather than cost or substitutability. Even if AI is cheap per FLOP, there simply isn't enough compute to do all the work. Human labor fills the gap.`,
       changes: {
-        tier_routine_flops: 17,
-        tier_standard_flops: 19,
+        tier_routine_flops: 18,
+        tier_standard_flops: 20,
         tier_complex_flops: 21,
-        tier_expert_flops: 23,
-        tier_frontier_flops: 25,
+        tier_expert_flops: 22,
+        tier_frontier_flops: 24,
         computeGrowthRate: 0.5,
         computeGrowthDecay: 0.08,
       },
@@ -324,20 +325,83 @@ This extends the timeline for AI disruption by 10-20 years. Humans have more tim
 
           {/* Quick Experiments */}
           <div className="border-t border-zinc-800 pt-4">
-            <p className="text-zinc-300 mb-3">🧪 Try These Experiments</p>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-zinc-300">🧪 Try These Experiments</p>
+              {savedParams && (
+                <button
+                  onClick={() => {
+                    setParams(savedParams);
+                    setSavedParams(null);
+                  }}
+                  className="text-xs text-indigo-400 hover:text-indigo-300 underline"
+                >
+                  ↩ Restore my assumptions
+                </button>
+              )}
+            </div>
+            <p className="text-zinc-600 text-xs mb-3">Clicking these will reset all parameters to defaults, then apply the experiment.</p>
             <div className="grid md:grid-cols-3 gap-3 text-xs">
-              <div className="bg-zinc-900/50 rounded p-3 border border-zinc-800">
+              <button
+                onClick={() => {
+                  setSavedParams(params);
+                  setParams({
+                    ...getDefaultValues(),
+                    tier_routine_maxSigma: 0.6,
+                    tier_standard_maxSigma: 0.6,
+                    tier_complex_maxSigma: 0.6,
+                    tier_expert_maxSigma: 0.6,
+                    tier_frontier_maxSigma: 0.6,
+                  });
+                }}
+                className="bg-zinc-900/50 rounded p-3 border border-zinc-800 hover:border-emerald-500/50 hover:bg-emerald-950/20 transition-all text-left cursor-pointer"
+              >
                 <p className="text-emerald-400">Optimist scenario</p>
                 <p className="text-zinc-500">Set σ max to 0.6 for all task tiers. Human share stays high even in 2050.</p>
-              </div>
-              <div className="bg-zinc-900/50 rounded p-3 border border-zinc-800">
+              </button>
+              <button
+                onClick={() => {
+                  setSavedParams(params);
+                  setParams({
+                    ...getDefaultValues(),
+                    tier_routine_maxSigma: 1,
+                    tier_standard_maxSigma: 1,
+                    tier_complex_maxSigma: 1,
+                    tier_expert_maxSigma: 1,
+                    tier_frontier_maxSigma: 1,
+                    tier_routine_sigmaMidpoint: 2026,
+                    tier_standard_sigmaMidpoint: 2026,
+                    tier_complex_sigmaMidpoint: 2026,
+                    tier_expert_sigmaMidpoint: 2026,
+                    tier_frontier_sigmaMidpoint: 2026,
+                    tier_routine_sigmaSteepness: 3,
+                    tier_standard_sigmaSteepness: 3,
+                    tier_complex_sigmaSteepness: 3,
+                    tier_expert_sigmaSteepness: 3,
+                    tier_frontier_sigmaSteepness: 3,
+                  });
+                }}
+                className="bg-zinc-900/50 rounded p-3 border border-zinc-800 hover:border-red-500/50 hover:bg-red-950/20 transition-all text-left cursor-pointer"
+              >
                 <p className="text-red-400">Pessimist scenario</p>
-                <p className="text-zinc-500">Set σ max to 0.99, midpoint to 2026, steepness to 3. Human wages and employment fall sharply.</p>
-              </div>
-              <div className="bg-zinc-900/50 rounded p-3 border border-zinc-800">
+                <p className="text-zinc-500">Set σ max to 1, midpoint to 2026, steepness to 3. Human wages and employment fall sharply.</p>
+              </button>
+              <button
+                onClick={() => {
+                  setSavedParams(params);
+                  setParams({
+                    ...getDefaultValues(),
+                    tier_routine_flops: 18,
+                    tier_standard_flops: 20,
+                    tier_complex_flops: 21,
+                    tier_expert_flops: 22,
+                    tier_frontier_flops: 23,
+                  });
+                }}
+                className="bg-zinc-900/50 rounded p-3 border border-zinc-800 hover:border-amber-500/50 hover:bg-amber-950/20 transition-all text-left cursor-pointer"
+              >
                 <p className="text-amber-400">Compute-constrained</p>
-                <p className="text-zinc-500">Raise the compute requirements for all task tiers significantly. Compute becomes the binding constraint.</p>
-              </div>
+                <p className="text-zinc-500">Raise FLOPs/hr by +3 OOM. Compute becomes the binding constraint even at low σ.</p>
+              </button>
             </div>
           </div>
 
@@ -520,7 +584,7 @@ This extends the timeline for AI disruption by 10-20 years. Humans have more tim
                 <ul className="space-y-1 list-disc list-inside ml-1">
                   <li><strong className="text-zinc-300">Cost: $1/exaFLOP</strong> — Based on cloud provider pricing (Dec 2024)</li>
                   <li><strong className="text-zinc-300">Cost decline: 30%/year</strong> — Historical GPU price/performance trend</li>
-                  <li><strong className="text-zinc-300">Wage floor: $15/hr</strong> — Base wage, multiplied per tier (Routine 1×, Standard 1.5×, Complex 2.5×, Expert 5×, Frontier 10×)</li>
+                  <li><strong className="text-zinc-300">Wage floor: $15/hr</strong> — Base wage, multiplied per tier (Routine 1×, Standard 1.5×, Complex 2×, Expert 3×, Frontier 6×)</li>
                 </ul>
               </div>
             </div>
@@ -559,7 +623,7 @@ This extends the timeline for AI disruption by 10-20 years. Humans have more tim
                 By 2044, compute is ~150× (not 1,000×) of 2024.
               </p>
               <ul className="space-y-1 list-disc list-inside ml-1">
-                <li><strong className="text-zinc-300">Compute Growth Slowdown (5%)</strong> — Hardware scaling gets harder each generation</li>
+                <li><strong className="text-zinc-300">Compute Growth Slowdown (10%)</strong> — Hardware scaling gets harder each generation</li>
                 <li><strong className="text-zinc-300">Efficiency Gain Slowdown (8%)</strong> — Algorithmic improvements have diminishing returns faster</li>
                 <li><strong className="text-zinc-300">Cost Decline Slowdown (5%)</strong> — Manufacturing optimizations plateau</li>
               </ul>
@@ -568,10 +632,11 @@ This extends the timeline for AI disruption by 10-20 years. Humans have more tim
               </p>
             </div>
             <div className="pt-4 border-t border-zinc-800 mt-4 text-xs text-zinc-500">
-              <h4 className="text-zinc-400 font-medium mb-2">Substitutability (σ) — S-Curve Growth</h4>
+              <h4 className="text-zinc-400 font-medium mb-2">Substitutability (σ) — S-Curve Growth + Deployment Lag</h4>
               <p className="mb-2">
                 AI capabilities often develop in breakthroughs, not smooth curves. Each tier uses an <strong className="text-zinc-300">S-curve (sigmoid)</strong> model 
-                with a <strong className="text-zinc-300">midpoint year</strong> (when the breakthrough happens) and <strong className="text-zinc-300">steepness</strong> (how rapid the transition):
+                with a <strong className="text-zinc-300">midpoint year</strong> (when the breakthrough happens), <strong className="text-zinc-300">steepness</strong> (how rapid the transition),
+                and <strong className="text-zinc-300">deployment lag</strong> (years between "AI can do it" and "AI is doing it"):
               </p>
               <div className="space-y-1 mb-2">
                 {modelOutputs.tiers.map((tier) => (
@@ -581,15 +646,20 @@ This extends the timeline for AI disruption by 10-20 years. Humans have more tim
                     <span className="text-zinc-500">
                       {(tier.initialSigma * 100).toFixed(0)}%→{(tier.maxSigma * 100).toFixed(0)}%, 
                       breakthrough ~{tier.sigmaMidpoint}, 
-                      steepness {tier.sigmaSteepness}
+                      steepness {tier.sigmaSteepness},
+                      lag {tier.deploymentLag}yr
                     </span>
                   </div>
                 ))}
               </div>
-              <p className="text-zinc-500">
+              <p className="text-zinc-500 mb-2">
                 <strong className="text-amber-400">Key insight:</strong> Move the midpoint later to model "AI can't do this yet, but eventually will." 
-                Steepness controls transition speed — use low values for gradual adoption (organizational inertia, 
-                regulation, trust-building) even if capabilities arrive quickly.
+                Steepness controls transition speed — use low values for gradual adoption even if capabilities arrive quickly.
+              </p>
+              <p className="text-zinc-500">
+                <strong className="text-cyan-400">Deployment Lag:</strong> Separates technical capability from real-world deployment. 
+                Even when AI <em>can</em> do a task, regulatory approval, organizational change, integration work, and trust-building 
+                delay actual adoption. σ_effective(year) = σ_possible(year - lag).
               </p>
             </div>
             <div className="pt-4 border-t border-zinc-800 mt-4 text-xs text-zinc-500">
@@ -803,7 +873,7 @@ This extends the timeline for AI disruption by 10-20 years. Humans have more tim
                 <div className="bg-zinc-900/50 rounded-lg p-3 border border-zinc-800">
                   <p className="text-zinc-300 font-medium mb-1">σ Steepness <span className="text-zinc-500 font-normal">(unit: 0.3-5)</span></p>
                   <p>
-                    <strong>How rapid the S-curve transition</strong> — controls whether the breakthrough is gradual or sudden.
+                    <strong>How rapid the S-curve transition</strong> — controls whether capability growth is gradual or sudden.
                   </p>
                   <ul className="list-disc list-inside mt-2 space-y-1">
                     <li><strong className="text-zinc-300">0.5</strong> — very gradual (~10 year spread)</li>
@@ -811,10 +881,28 @@ This extends the timeline for AI disruption by 10-20 years. Humans have more tim
                     <li><strong className="text-zinc-300">2.0</strong> — fairly sharp (~2-3 year spread)</li>
                     <li><strong className="text-zinc-300">3.0+</strong> — step-like (~1 year, sudden capability jump)</li>
                   </ul>
+                </div>
+                
+                <div className="bg-cyan-950/30 rounded-lg p-3 border border-cyan-900/40">
+                  <p className="text-cyan-300 font-medium mb-1">Deployment Lag <span className="text-zinc-500 font-normal">(unit: years, 0-10)</span></p>
+                  <p>
+                    <strong>Years between "AI can do it" and "AI is doing it"</strong> — separates technical capability from real-world deployment.
+                  </p>
                   <p className="mt-2 text-zinc-400">
-                    <strong className="text-amber-400">Tip:</strong> Steepness can also proxy for <em>adoption lag</em>. 
-                    Even if AI becomes capable quickly, low steepness models slow organizational adoption 
-                    (trust-building, regulation, integration costs, retraining).
+                    <strong>σ_effective(year) = σ_possible(year - lag)</strong>
+                  </p>
+                  <p className="mt-2 text-zinc-400">
+                    Even when AI <em>can</em> perform a task, adoption is delayed by:
+                  </p>
+                  <ul className="list-disc list-inside mt-1 space-y-1">
+                    <li>Regulatory approval and compliance</li>
+                    <li>Organizational change management</li>
+                    <li>Integration and tooling development</li>
+                    <li>Trust-building and risk assessment</li>
+                  </ul>
+                  <p className="mt-2 text-zinc-400">
+                    <strong className="text-amber-400">Defaults:</strong> Routine/Standard/Complex: 2yr, Expert: 3yr, Frontier: 1yr 
+                    (frontier may deploy faster due to competitive pressure).
                   </p>
                 </div>
                 
@@ -846,9 +934,9 @@ This extends the timeline for AI disruption by 10-20 years. Humans have more tim
                   <ul className="list-disc list-inside mt-2 space-y-1">
                     <li><strong className="text-zinc-300">Routine 1.0×</strong> = minimum $15/hr (at $15 floor)</li>
                     <li><strong className="text-zinc-300">Standard 1.5×</strong> = minimum $22.50/hr</li>
-                    <li><strong className="text-zinc-300">Complex 2.5×</strong> = minimum $37.50/hr</li>
-                    <li><strong className="text-zinc-300">Expert 5.0×</strong> = minimum $75/hr</li>
-                    <li><strong className="text-zinc-300">Frontier 10.0×</strong> = minimum $150/hr</li>
+                    <li><strong className="text-zinc-300">Complex 2.0×</strong> = minimum $30/hr</li>
+                    <li><strong className="text-zinc-300">Expert 3.0×</strong> = minimum $45/hr</li>
+                    <li><strong className="text-zinc-300">Frontier 6.0×</strong> = minimum $90/hr</li>
                   </ul>
                   <p className="mt-2 text-zinc-400">
                     Actual wages may exceed these minimums based on labor market tightness (see below).
@@ -1168,11 +1256,11 @@ effective = raw × Π[y=0 to t-1] efficiency(y)`}
               <div className="bg-indigo-950/30 rounded-lg p-3 border border-indigo-900/40">
                 <p className="text-indigo-300 font-medium mb-2">📝 Example: Routine Tier, Year 2</p>
                 <div className="text-xs space-y-1 font-mono">
-                  <p>Routine tier compute required: 10^12 FLOPs/hr</p>
+                  <p>Routine tier compute required: 10^15 FLOPs/hr</p>
                   <p>Cost: $1/exaFLOP, efficiency: 4× (year 2)</p>
-                  <p>AI cost = (10^12 / 4) / 10^18 × $1</p>
-                  <p>AI cost = 2.5×10^11 / 10^18 × $1 = <span className="text-emerald-400">$0.00000025/hr</span></p>
-                  <p>vs human wage $15/hr → <span className="text-amber-400">AI is 60 million × cheaper</span></p>
+                  <p>AI cost = (10^15 / 4) / 10^18 × $1</p>
+                  <p>AI cost = 2.5×10^14 / 10^18 × $1 = <span className="text-emerald-400">$0.00025/hr</span></p>
+                  <p>vs human wage $15/hr → <span className="text-amber-400">AI is 60,000× cheaper</span></p>
                 </div>
               </div>
               
@@ -1222,6 +1310,19 @@ effective = raw × Π[y=0 to t-1] efficiency(y)`}
                   <li><strong>σ = 0.5:</strong> AI can do 50% of the work, humans must do rest</li>
                   <li><strong>σ = 1:</strong> AI can fully substitute (limited only by cost/compute)</li>
                 </ul>
+              </div>
+              
+              <div className="bg-cyan-950/30 rounded-lg p-3 border border-cyan-900/40">
+                <p className="text-cyan-300 font-medium mb-2">Deployment Lag: σ_possible vs σ_effective</p>
+                <p className="text-xs mb-2">
+                  The S-curve gives us σ_possible (what AI <em>can</em> do). But there's a delay before AI <em>is</em> doing it:
+                </p>
+                <pre className="bg-zinc-950 p-2 rounded text-xs text-emerald-400 overflow-x-auto">
+{`σ_effective(year) = σ_possible(year - deploymentLag)`}
+                </pre>
+                <p className="text-xs mt-2">
+                  Default lags: Routine/Standard/Complex: 2yr, Expert: 3yr, Frontier: 1yr.
+                </p>
               </div>
               
               <div className="bg-zinc-900/50 rounded-lg p-3 border border-zinc-800">
@@ -1309,8 +1410,8 @@ Total Hours = baseHours × baseline × aiInduced × newTasks`}
                 <p className="text-indigo-300 font-medium mb-2">📝 Example</p>
                 <div className="text-xs space-y-1 font-mono">
                   <p>Available: 10^30 FLOPs/year</p>
-                  <p>Frontier bids: $1000/hr ÷ 10^18 FLOP/hr = <span className="text-emerald-400">$10^-15/FLOP</span></p>
-                  <p>Routine bids: $15/hr ÷ 10^12 FLOP/hr = <span className="text-emerald-400">$1.5×10^-11/FLOP</span></p>
+                  <p>Frontier bids: $1000/hr ÷ 10^21 FLOP/hr = <span className="text-emerald-400">$10^-18/FLOP</span></p>
+                  <p>Routine bids: $15/hr ÷ 10^15 FLOP/hr = <span className="text-emerald-400">$1.5×10^-14/FLOP</span></p>
                   <p className="mt-2">Routine bids higher per-FLOP → served first</p>
                   <p>If Routine exhausts compute → Frontier gets nothing</p>
                   <p>Clearing price = marginal tier's reservation price</p>
@@ -1475,10 +1576,10 @@ finalWage = min(rawWage, taskValue)`}
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-zinc-100">
-              AI Compute Bounds Calculator
+              AI Labour Displacement Calculator
             </h1>
             <p className="text-sm text-zinc-500 mt-1">
-              Explore how compute constraints affect AI/human labor substitution
+              Explore how compute and substitutability constraints affect AI/human labor substitution
             </p>
           </div>
           <button
@@ -1507,6 +1608,31 @@ finalWage = min(rawWage, taskValue)`}
           
           {/* Right Column: Tabbed Content */}
           <div className="lg:col-span-8">
+            {/* Year Slider - Always visible */}
+            <div className="bg-[#12121a] rounded-xl p-4 border border-zinc-800 mb-4">
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-medium text-zinc-200">
+                  Projection Year
+                </label>
+                <span className="text-lg font-semibold text-indigo-400 tabular-nums">
+                  {params.year}
+                </span>
+              </div>
+              <input
+                type="range"
+                min={2024}
+                max={2050}
+                step={1}
+                value={params.year}
+                onChange={(e) => handleParamChange('year', parseInt(e.target.value))}
+                className="w-full"
+              />
+              <div className="flex justify-between text-xs text-zinc-500 mt-1">
+                <span>2024</span>
+                <span>2050</span>
+              </div>
+            </div>
+            
             <Tabs tabs={tabs} defaultTab="intro" />
           </div>
         </div>

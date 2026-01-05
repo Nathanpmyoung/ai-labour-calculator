@@ -63,6 +63,7 @@ export interface TaskTier {
   maxSigma: number;              // Asymptotic σ this tier can reach
   sigmaMidpoint: number;         // Year when σ reaches halfway (the "breakthrough" year)
   sigmaSteepness: number;        // How rapid the transition (1=gradual, 3=sharp)
+  deploymentLag: number;         // Years between "AI can do it" and "AI is doing it"
   humanCapable: number;          // Fraction of workforce capable of this tier (0-1)
   wageMultiplier: number;        // Minimum wage multiplier vs base floor for this tier
   taskValue: number;             // Max $/hr employers will pay (wage ceiling)
@@ -86,6 +87,7 @@ export function buildTaskTiers(params: ParameterValues): TaskTier[] {
     maxSigma: params[`tier_${config.id}_maxSigma`] ?? config.maxSigma,
     sigmaMidpoint: params[`tier_${config.id}_sigmaMidpoint`] ?? config.sigmaMidpoint,
     sigmaSteepness: params[`tier_${config.id}_sigmaSteepness`] ?? config.sigmaSteepness,
+    deploymentLag: params[`tier_${config.id}_deploymentLag`] ?? config.deploymentLag,
     humanCapable: params[`tier_${config.id}_humanCapable`] ?? config.humanCapable,
     wageMultiplier: params[`tier_${config.id}_wageMultiplier`] ?? config.wageMultiplier,
     taskValue: params[`tier_${config.id}_taskValue`] ?? config.taskValue,
@@ -119,6 +121,7 @@ export const DEFAULT_TASK_TIERS: TaskTier[] = TIER_CONFIGS.map(config => ({
   maxSigma: config.maxSigma,
   sigmaMidpoint: config.sigmaMidpoint,
   sigmaSteepness: config.sigmaSteepness,
+  deploymentLag: config.deploymentLag,
   humanCapable: config.humanCapable,
   wageMultiplier: config.wageMultiplier,
   taskValue: config.taskValue,
@@ -212,17 +215,24 @@ export interface ModelOutputs {
  * - Plateau: physical/social limits reached
  * 
  * Formula: σ(year) = initial + (max - initial) / (1 + e^(-steepness × (year - midpoint)))
+ * 
+ * The deploymentLag parameter separates "AI can do it" (σ_possible) from "AI is doing it" (σ_effective).
+ * σ_effective(year) = σ_possible(year - deploymentLag)
  */
 function calculateTierSubstitutability(
   initialSigma: number,
   maxSigma: number,
   midpointYear: number,
   steepness: number,
-  currentYear: number
+  currentYear: number,
+  deploymentLag: number = 0  // Years between capability and deployment
 ): number {
+  // Apply deployment lag: effective year is earlier than current year
+  const effectiveYear = currentYear - deploymentLag;
+  
   // Sigmoid function: σ = initial + (max - initial) / (1 + e^(-k(t - midpoint)))
   const range = maxSigma - initialSigma;
-  const exponent = -steepness * (currentYear - midpointYear);
+  const exponent = -steepness * (effectiveYear - midpointYear);
   const sigma = initialSigma + range / (1 + Math.exp(exponent));
   
   return Math.min(Math.max(sigma, 0), 1);
@@ -604,12 +614,32 @@ function allocateComputeOptimally(
   
   // Build a legacy LP-shaped result object for compatibility with the rest of the code
   const lpResult: LPResult = { feasible: true, bounded: true, result: 0 };
+  
+  // First pass: record AI allocations
   for (const tv of tierValues) {
     const alloc = allocation.get(tv.tier.id) ?? { aiHours: 0, computeUsed: 0 };
     lpResult[`ai_${tv.tier.id}`] = alloc.aiHours;
-    // Humans fill remaining demand up to capacity
+  }
+  
+  // Second pass: allocate humans with GLOBAL capacity constraint
+  // Sort by wage (highest first) - prioritize high-value work when humans are scarce
+  const sortedByWage = [...tierValues].sort((a, b) => b.tierWage - a.tierWage);
+  let remainingHumanHours = totalWorkforceHours; // Global human capacity
+  const globalHumanCapacityBinding: Set<string> = new Set(); // Track which tiers hit global cap
+  
+  for (const tv of sortedByWage) {
+    const alloc = allocation.get(tv.tier.id) ?? { aiHours: 0, computeUsed: 0 };
+    // Humans fill remaining demand up to BOTH per-tier capacity AND global remaining capacity
     const remainingDemand = tv.tierHours - alloc.aiHours;
-    lpResult[`human_${tv.tier.id}`] = Math.min(remainingDemand, tv.humanCapacityHours);
+    const perTierCap = Math.min(remainingDemand, tv.humanCapacityHours);
+    const humanHoursForTier = Math.min(perTierCap, remainingHumanHours);
+    lpResult[`human_${tv.tier.id}`] = humanHoursForTier;
+    
+    // Track if this tier was constrained by global capacity (not per-tier)
+    if (humanHoursForTier < perTierCap && remainingHumanHours < perTierCap) {
+      globalHumanCapacityBinding.add(tv.tier.id);
+    }
+    remainingHumanHours -= humanHoursForTier;
   }
   
   // Market price is the clearing tier's reservation price
@@ -648,6 +678,7 @@ function allocateComputeOptimally(
     const gotFullSigma = Math.abs(aiHours - tv.maxAIHours) < 0.01 * tv.maxAIHours;
     const humanCapacityFull = Math.abs(humanHours - tv.humanCapacityHours) < 0.01 * tv.humanCapacityHours;
     const almostNoAI = aiHours < 0.05 * tv.maxAIHours;
+    const hitGlobalHumanCap = globalHumanCapacityBinding.has(tv.tier.id);
     
     if (!wouldUseAtProductionCost && almostNoAI) {
       // AI too expensive even at production cost
@@ -658,8 +689,8 @@ function allocateComputeOptimally(
     } else if (gotFullSigma) {
       // Got full σ allocation - substitutability is the limit
       bindingConstraint = 'substitutability';
-    } else if (humanCapacityFull && humanHours > 0) {
-      // Human capacity is full
+    } else if ((humanCapacityFull || hitGlobalHumanCap) && humanHours > 0) {
+      // Human capacity is full (either per-tier or global)
       bindingConstraint = 'humanCapacity';
     } else if (scarcityPremium > 1.5 && almostNoAI) {
       // High scarcity but didn't get AI - compute is scarce
@@ -920,14 +951,16 @@ export function runModel(params: ParameterValues): ModelOutputs {
     const yearsFromBase = year - BASE_YEAR;
     
     // Calculate per-tier substitutability for this year (S-curve model)
-    // Each tier has its own midpoint year (breakthrough) and steepness
+    // Each tier has its own midpoint year (breakthrough), steepness, and deployment lag
+    // Deployment lag separates "AI can do it" from "AI is doing it"
     const tierSigmaArray = taskTiers.map(tier => 
       calculateTierSubstitutability(
         tier.initialSigma,
         tier.maxSigma,
         tier.sigmaMidpoint,
         tier.sigmaSteepness,
-        year
+        year,
+        tier.deploymentLag
       )
     );
     
