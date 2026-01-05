@@ -1,4 +1,4 @@
-# AI Compute Bounds Calculator
+# AI  Labour Displacement Calculator
 
 An interactive calculator exploring how compute constraints might affect AI/human labor substitution over time.
 
@@ -75,7 +75,7 @@ To enable:
 | AI Utilization | Fraction of compute for cognitive work | 30% |
 
 ### Substitutability (σ) — S-Curve Model
-Each tier has independent parameters:
+Each task tier has independent parameters:
 | Parameter | Description |
 |-----------|-------------|
 | Initial σ | Starting substitutability (0 = complements, 1 = perfect substitutes) |
@@ -95,6 +95,7 @@ Each tier has independent parameters:
 |-----------|-------------|
 | FLOPs/hr | Compute required for AI to do one hour of work |
 | Share | Fraction of total cognitive work in this tier |
+| Deployment Lag | Years between "AI can do it" and "AI is doing it" (adoption delay) |
 | Human Capable | Fraction of workforce able to do this tier |
 | Wage Multiplier | How much more this tier pays vs base wage |
 | Task Value | Maximum willingness to pay (wage ceiling) |
@@ -133,4 +134,4 @@ AGPL-3.0 — see [LICENSE](./LICENSE)
 
 ## Context
 
-Inspired by a [debate between @CharlesD353 and @SebKrier](https://x.com/CharlesD353/status/2005592245232452079) on whether compute limitations will preserve human labor value.
+Inspired by a [discussion between @CharlesD353 and @SebKrier](https://x.com/CharlesD353/status/2005592245232452079) on whether compute limitations will preserve human labor value.
