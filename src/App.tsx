@@ -1927,7 +1927,18 @@ finalWage = min(rawWage, taskValue)`}
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-zinc-100">
-              AI Labour Displacement Calculator <span className="italic font-normal text-zinc-400 text-sm">by Charles Dillon</span>
+              AI Labour Displacement Calculator{' '}
+              <span className="font-normal italic text-zinc-400">
+                by{' '}
+                <a
+                  href="https://x.com/CharlesD353"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-zinc-200 transition-colors"
+                >
+                  Charles Dillon
+                </a>
+              </span>
             </h1>
             <p className="text-sm text-zinc-500 mt-1">
               Explore how compute and substitutability constraints affect AI/human labour substitution
