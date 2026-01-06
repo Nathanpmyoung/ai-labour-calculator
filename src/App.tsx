@@ -229,7 +229,7 @@ This extends the timeline for AI disruption by 10-20 years. Humans have more tim
 
   const targetProjection = modelOutputs.projections.find(p => p.year === params.year);
 
-  // Generate clipboard text with model context and current outputs
+  // Generate clipboard text with model context and ALL yearly outputs
   const generateClipboardText = () => {
     if (!targetProjection) return '';
 
@@ -244,14 +244,19 @@ This extends the timeline for AI disruption by 10-20 years. Humans have more tim
       if (n >= 1) return `$${n.toFixed(2)}`;
       if (n >= 0.01) return `$${n.toFixed(2)}`;
       if (n >= 0.0001) return `$${n.toFixed(4)}`;
-      return `$${n.toExponential(1)}`;
+      return `$${n.toExponential(2)}`;
+    };
+
+    const formatNum = (n: number): string => {
+      if (n >= 1e12) return `${(n / 1e12).toFixed(2)}T`;
+      if (n >= 1e9) return `${(n / 1e9).toFixed(2)}B`;
+      if (n >= 1e6) return `${(n / 1e6).toFixed(2)}M`;
+      if (n >= 1e3) return `${(n / 1e3).toFixed(2)}K`;
+      return n.toFixed(2);
     };
 
     const baseline2024 = modelOutputs.projections.find(p => p.year === 2024);
     const baselineHumanHours = baseline2024?.totalHumanHours ?? targetProjection.totalHumanHours;
-    const humanHoursChange = ((targetProjection.totalHumanHours - baselineHumanHours) / baselineHumanHours) * 100;
-    const baselineAvgWage = baseline2024?.humanWageEquilibrium ?? targetProjection.humanWageEquilibrium;
-    const avgWageChange = ((targetProjection.humanWageEquilibrium - baselineAvgWage) / baselineAvgWage) * 100;
 
     // Build baseline wage lookup
     const baselineWageByTier: Record<string, number> = {};
@@ -259,14 +264,107 @@ This extends the timeline for AI disruption by 10-20 years. Humans have more tim
       baselineWageByTier[ta.tier.id] = ta.tierWage;
     });
 
-    const tierBreakdown = targetProjection.tierAllocations.map(ta => {
-      const baselineWage = baselineWageByTier[ta.tier.id] ?? ta.tierWage;
-      const wageChange = ((ta.tierWage - baselineWage) / baselineWage) * 100;
-      const ftes = ta.hoursHuman / 2000;
-      return `  - ${ta.tier.name}: Human share ${(ta.humanShare * 100).toFixed(0)}%, Wage ${formatCurrency(ta.tierWage)}/hr (${wageChange >= 0 ? '+' : ''}${wageChange.toFixed(0)}% vs 2024), AI cost ${formatCurrency(ta.aiCostPerHour)}/hr, ${ftes >= 1e6 ? `${(ftes/1e6).toFixed(1)}M` : `${(ftes/1e3).toFixed(0)}K`} FTEs`;
+    // Yearly summary table
+    const yearlySummary = modelOutputs.projections.map(p => {
+      const empPct = ((p.totalHumanHours / baselineHumanHours) * 100).toFixed(1);
+      return `${p.year}\t${formatHours(p.totalCognitiveWorkHours)}\t${(p.aiTaskShare * 100).toFixed(1)}%\t${(p.humanTaskShare * 100).toFixed(1)}%\t${empPct}%\t${formatCurrency(p.humanWageEquilibrium)}\t${(p.averageSubstitutability * 100).toFixed(0)}%\t${p.primaryBindingConstraint}`;
     }).join('\n');
 
-    return `# AI Labour Displacement Calculator - Model Output
+    // Compute supply time series
+    const computeTimeSeries = modelOutputs.projections.map(p =>
+      `${p.year}\t${formatNum(p.totalComputeFlops)} FLOP/s\t${formatNum(p.effectiveComputeFlops)} eff\t${formatCurrency(p.computeCostPerExaflop)}/exaFLOP\t${(p.computeUtilization * 100).toFixed(1)}%`
+    ).join('\n');
+
+    // Per-tier time series
+    const tierNames = modelOutputs.tiers.map(t => t.name);
+    const tierHeader = `Year\t${tierNames.join('\t')}`;
+
+    const sigmaTimeSeries = modelOutputs.projections.map(p => {
+      const vals = p.tierAllocations.map(ta => `${(ta.effectiveSubstitutability * 100).toFixed(0)}%`);
+      return `${p.year}\t${vals.join('\t')}`;
+    }).join('\n');
+
+    const aiShareTimeSeries = modelOutputs.projections.map(p => {
+      const vals = p.tierAllocations.map(ta => `${(ta.aiShare * 100).toFixed(1)}%`);
+      return `${p.year}\t${vals.join('\t')}`;
+    }).join('\n');
+
+    const humanShareTimeSeries = modelOutputs.projections.map(p => {
+      const vals = p.tierAllocations.map(ta => `${(ta.humanShare * 100).toFixed(1)}%`);
+      return `${p.year}\t${vals.join('\t')}`;
+    }).join('\n');
+
+    const wageTimeSeries = modelOutputs.projections.map(p => {
+      const vals = p.tierAllocations.map(ta => formatCurrency(ta.tierWage));
+      return `${p.year}\t${vals.join('\t')}`;
+    }).join('\n');
+
+    const aiCostTimeSeries = modelOutputs.projections.map(p => {
+      const vals = p.tierAllocations.map(ta => formatCurrency(ta.aiCostPerHour));
+      return `${p.year}\t${vals.join('\t')}`;
+    }).join('\n');
+
+    const fteTimeSeries = modelOutputs.projections.map(p => {
+      const vals = p.tierAllocations.map(ta => {
+        const fte = ta.hoursHuman / 2000;
+        return fte >= 1e9 ? `${(fte/1e9).toFixed(2)}B` : fte >= 1e6 ? `${(fte/1e6).toFixed(1)}M` : `${(fte/1e3).toFixed(0)}K`;
+      });
+      return `${p.year}\t${vals.join('\t')}`;
+    }).join('\n');
+
+    const constraintTimeSeries = modelOutputs.projections.map(p => {
+      const vals = p.tierAllocations.map(ta => ta.bindingConstraint);
+      return `${p.year}\t${vals.join('\t')}`;
+    }).join('\n');
+
+    // Employment trajectory
+    const employmentTimeSeries = modelOutputs.projections.map(p => {
+      const pct = ((p.totalHumanHours / baselineHumanHours) * 100).toFixed(1);
+      const totalFtes = p.totalHumanHours / 2000;
+      const fteStr = totalFtes >= 1e9 ? `${(totalFtes/1e9).toFixed(2)}B` : `${(totalFtes/1e6).toFixed(0)}M`;
+      return `${p.year}\t${pct}%\t${fteStr} FTEs\t${formatCurrency(p.humanWageEquilibrium)}/hr`;
+    }).join('\n');
+
+    // Detailed yearly projections
+    const yearlyDetails = modelOutputs.projections.map(p => {
+      const tierDetails = p.tierAllocations.map(ta => {
+        const baseWage = baselineWageByTier[ta.tier.id] ?? ta.tierWage;
+        const wageChg = ((ta.tierWage - baseWage) / baseWage) * 100;
+        const fte = ta.hoursHuman / 2000;
+        const fteStr = fte >= 1e9 ? `${(fte/1e9).toFixed(2)}B` : fte >= 1e6 ? `${(fte/1e6).toFixed(1)}M` : `${(fte/1e3).toFixed(0)}K`;
+        return `    ${ta.tier.name}: Human=${(ta.humanShare*100).toFixed(1)}%, AI=${(ta.aiShare*100).toFixed(1)}%, σ=${(ta.effectiveSubstitutability*100).toFixed(0)}%, Wage=${formatCurrency(ta.tierWage)} (${wageChg>=0?'+':''}${wageChg.toFixed(0)}%), AI_Cost=${formatCurrency(ta.aiCostPerHour)}, FTEs=${fteStr}, Constraint=${ta.bindingConstraint}`;
+      }).join('\n');
+
+      return `### ${p.year}
+- Demand: ${formatHours(p.totalCognitiveWorkHours)} hrs (+${(p.demandGrowthFromBaseline*100).toFixed(0)}% vs 2024)
+  - Baseline: ×${p.demandComponents.baseline.toFixed(3)}, AI-induced: ×${p.demandComponents.aiInduced.toFixed(3)}, New tasks: ×${p.demandComponents.newTasks.toFixed(3)}
+- AI: ${formatHours(p.totalAIHours)} hrs (${(p.aiTaskShare*100).toFixed(1)}%)
+- Human: ${formatHours(p.totalHumanHours)} hrs (${(p.humanTaskShare*100).toFixed(1)}%)
+- Employment vs 2024: ${((p.totalHumanHours/baselineHumanHours)*100).toFixed(1)}%
+- Unmet: ${formatHours(p.totalUnmetHours)} hrs (${(p.unmetTaskShare*100).toFixed(1)}%)
+- Avg Wage: ${formatCurrency(p.humanWageEquilibrium)}/hr
+- Avg σ: ${(p.averageSubstitutability*100).toFixed(1)}%
+- Compute: ${formatNum(p.effectiveComputeFlops)} eff FLOP/s @ ${formatCurrency(p.computeCostPerExaflop)}/exaFLOP
+- Utilization: ${(p.computeUtilization*100).toFixed(1)}%, Scarcity: ${p.scarcityPremium.toFixed(2)}×
+- Primary Constraint: ${p.primaryBindingConstraint}
+- Tiers:
+${tierDetails}`;
+    }).join('\n\n');
+
+    // Selected year detailed table
+    const selectedYearTable = (() => {
+      const p = targetProjection;
+      const rows = p.tierAllocations.map(ta => {
+        const baseWage = baselineWageByTier[ta.tier.id] ?? ta.tierWage;
+        const wageChg = ((ta.tierWage - baseWage) / baseWage) * 100;
+        const fte = ta.hoursHuman / 2000;
+        const fteStr = fte >= 1e9 ? `${(fte/1e9).toFixed(2)}B` : fte >= 1e6 ? `${(fte/1e6).toFixed(1)}M` : `${(fte/1e3).toFixed(0)}K`;
+        return `| ${ta.tier.name} | ${(ta.humanShare*100).toFixed(0)}% | ${(ta.aiShare*100).toFixed(0)}% | ${(ta.effectiveSubstitutability*100).toFixed(0)}% | ${formatCurrency(ta.tierWage)} (${wageChg>=0?'+':''}${wageChg.toFixed(0)}%) | ${formatCurrency(ta.aiCostPerHour)} | ${fteStr} | ${ta.bindingConstraint} |`;
+      }).join('\n');
+      return rows;
+    })();
+
+    return `# AI Labour Displacement Calculator - Full Model Output
 
 ## About This Model
 
@@ -278,49 +376,119 @@ This is output from an interactive economic simulator that explores how AI autom
 
 The model finds equilibrium wages where labor supply meets demand, accounting for constraints like compute scarcity, AI costs, substitutability limits, and human workforce capacity.
 
-Key debate this model explores:
+### Key Debate
 - **Optimistic view**: Even if AI is cheaper per task, compute scarcity and substitutability limits may preserve human labor value
 - **Pessimistic view**: If AI costs fall faster than compute grows and substitutability approaches 100%, human labor could lose most economic value
 
-## Current Projection: Year ${params.year}
+### Task Tiers
+${modelOutputs.tiers.map(t => `- **${t.name}**: ${t.description} (${(t.shareOfCognitive*100).toFixed(0)}% of work, 10^${t.flopsPerHourExponent} FLOPs/hr, ${(t.humanCapable*100).toFixed(0)}% capable, ${t.wageMultiplier}× wage)`).join('\n')}
+
+---
+
+## Parameters Used
+
+### Compute Supply
+- Base Compute (2024): 10^${params.baseComputeExponent} FLOP/s
+- Growth Rate: ${(params.computeGrowthRate*100).toFixed(0)}%/yr (decay ${(params.computeGrowthDecay*100).toFixed(0)}%/yr)
+- Efficiency Gain: ${params.efficiencyImprovement}×/yr (decay ${(params.efficiencyDecay*100).toFixed(0)}%/yr)
+
+### Costs
+- AI Cost (2024): $${params.baseComputeCost}/exaFLOP
+- Cost Decline: ${(params.costDeclineRate*100).toFixed(0)}%/yr (decay ${(params.costDeclineDecay*100).toFixed(0)}%/yr)
+- Human Wage Floor: $${params.humanWageFloor}/hr
+
+### Demand
+- Baseline Growth: ${(params.baselineDemandGrowth*100).toFixed(1)}%/yr
+- Demand Elasticity: ${params.demandElasticity}
+- New Task Creation: ${params.newTaskCreationRate}
+- Cognitive Share: ${(params.cognitiveShare*100).toFixed(0)}%
+
+### Per-Tier Substitutability (σ)
+${modelOutputs.tiers.map(t => `- ${t.name}: ${(t.initialSigma*100).toFixed(0)}%→${(t.maxSigma*100).toFixed(0)}% max, midpoint ${t.sigmaMidpoint}, steepness ${t.sigmaSteepness}, lag ${t.deploymentLag}yr`).join('\n')}
+
+---
+
+## Summary Stats
+- Crossover Year (AI < human cost avg): ${modelOutputs.summary.crossoverYear ?? 'Not by 2050'}
+- Compute Sufficiency Year: ${modelOutputs.summary.computeSufficiencyYear ?? 'After 2050'}
+- Final AI Share (2050): ${(modelOutputs.summary.finalAiShare*100).toFixed(1)}%
+- Final Human Wage (2050): ${formatCurrency(modelOutputs.summary.finalHumanWage)}/hr
+
+---
+
+## TIME SERIES DATA
+
+### Yearly Summary
+Year\tDemand\tAI%\tHuman%\tEmployment\tAvgWage\tAvgσ\tConstraint
+${yearlySummary}
+
+### Employment Over Time
+Year\tEmployment vs 2024\tTotal FTEs\tAvg Wage
+${employmentTimeSeries}
+
+### Compute Supply Over Time
+Year\tRaw Compute\tEffective\tCost\tUtilization
+${computeTimeSeries}
+
+### Substitutability (σ) by Tier
+${tierHeader}
+${sigmaTimeSeries}
+
+### AI Share by Tier
+${tierHeader}
+${aiShareTimeSeries}
+
+### Human Share by Tier
+${tierHeader}
+${humanShareTimeSeries}
+
+### Human Wages by Tier ($/hr)
+${tierHeader}
+${wageTimeSeries}
+
+### AI Cost by Tier ($/hr)
+${tierHeader}
+${aiCostTimeSeries}
+
+### Human FTEs by Tier
+${tierHeader}
+${fteTimeSeries}
+
+### Binding Constraint by Tier
+${tierHeader}
+${constraintTimeSeries}
+
+---
+
+## DETAILED YEARLY PROJECTIONS
+
+${yearlyDetails}
+
+---
+
+## SELECTED YEAR: ${params.year}
 
 ### Key Metrics
+- Total Demand: ${formatHours(targetProjection.totalCognitiveWorkHours)} hrs/yr (+${(targetProjection.demandGrowthFromBaseline*100).toFixed(0)}% vs 2024)
+- AI Work: ${formatHours(targetProjection.totalAIHours)} hrs/yr (${(targetProjection.aiTaskShare*100).toFixed(1)}%)
+- Human Work: ${formatHours(targetProjection.totalHumanHours)} hrs/yr (${(targetProjection.humanTaskShare*100).toFixed(1)}%)
+- Employment vs 2024: ${((targetProjection.totalHumanHours/baselineHumanHours)*100).toFixed(1)}%
+- Unmet Demand: ${formatHours(targetProjection.totalUnmetHours)} hrs/yr (${(targetProjection.unmetTaskShare*100).toFixed(1)}%)
+- Avg Wage: ${formatCurrency(targetProjection.humanWageEquilibrium)}/hr
+- Compute: ${formatNum(targetProjection.effectiveComputeFlops)} eff FLOP/s
+- Utilization: ${(targetProjection.computeUtilization*100).toFixed(1)}%
+- Scarcity Premium: ${targetProjection.scarcityPremium.toFixed(2)}×
+- Avg σ: ${(targetProjection.averageSubstitutability*100).toFixed(0)}%
+- Primary Constraint: ${targetProjection.primaryBindingConstraint}
 
-- **Total Cognitive Work Demand**: ${formatHours(targetProjection.totalCognitiveWorkHours)} hours/year (+${(targetProjection.demandGrowthFromBaseline * 100).toFixed(0)}% vs 2024)
-  - Baseline GDP growth: ×${targetProjection.demandComponents.baseline.toFixed(2)}
-  - AI-induced demand (Jevons effect): ×${targetProjection.demandComponents.aiInduced.toFixed(2)}
-  - New task creation: ×${targetProjection.demandComponents.newTasks.toFixed(2)}
-
-- **AI Work Done**: ${formatHours(targetProjection.totalAIHours)} hours/year (${(targetProjection.aiTaskShare * 100).toFixed(1)}% of total)
-- **Human Work Done**: ${formatHours(targetProjection.totalHumanHours)} hours/year (${(targetProjection.humanTaskShare * 100).toFixed(1)}% of total)
-- **Human Employment vs 2024**: ${((targetProjection.totalHumanHours / baselineHumanHours) * 100).toFixed(0)}% (${humanHoursChange >= 0 ? '+' : ''}${humanHoursChange.toFixed(0)}% change)
-- **Average Human Wage**: ${formatCurrency(targetProjection.humanWageEquilibrium)}/hr (${avgWageChange >= 0 ? '+' : ''}${avgWageChange.toFixed(0)}% vs 2024)
-- **Unmet Demand**: ${(targetProjection.unmetTaskShare * 100).toFixed(1)}% of work couldn't be done
-- **Compute Utilization**: ${(targetProjection.computeUtilization * 100).toFixed(1)}%
-- **Average Substitutability (σ)**: ${(targetProjection.averageSubstitutability * 100).toFixed(0)}%
-- **Primary Binding Constraint**: ${targetProjection.primaryBindingConstraint === 'compute' ? 'Compute Scarcity' : targetProjection.primaryBindingConstraint === 'cost' ? 'AI Cost' : targetProjection.primaryBindingConstraint === 'humanCapacity' ? 'Human Capacity' : 'Substitutability Limit'}
-
-### Employment & Wages by Task Tier
-
-${tierBreakdown}
-
-### Key Parameters Used
-
-- Base AI Compute (2024): 10^${params.baseComputeExponent} FLOP/s
-- Compute Growth Rate: ${(params.computeGrowthRate * 100).toFixed(0)}%/year
-- AI Cost (2024): $${params.baseComputeCost}/exaFLOP
-- Cost Decline Rate: ${(params.costDeclineRate * 100).toFixed(0)}%/year
-- Human Wage Floor: $${params.humanWageFloor}/hr
-- Demand Elasticity: ${params.demandElasticity}
-- New Task Creation Rate: ${params.newTaskCreationRate}
-
-### Task Tier Substitutability Settings (σ)
-
-${modelOutputs.tiers.map(t => `- ${t.name}: ${(t.initialSigma * 100).toFixed(0)}% → ${(t.maxSigma * 100).toFixed(0)}% max, breakthrough year ~${t.sigmaMidpoint}`).join('\n')}
+### Tier Breakdown
+| Tier | Human% | AI% | σ | Wage (vs 2024) | AI Cost | FTEs | Constraint |
+|------|--------|-----|---|----------------|---------|------|------------|
+${selectedYearTable}
 
 ---
 Generated from: AI Labour Displacement Calculator
-This model was built to explore debates about whether compute limitations will preserve human labor value in an age of AI.`;
+Model explores whether compute limitations preserve human labor value in an age of AI.`;
   };
 
   const handleCopyOutput = async () => {
