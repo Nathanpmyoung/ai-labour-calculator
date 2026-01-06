@@ -23,6 +23,7 @@ function App() {
   const [params, setParams] = useState<ParameterValues>(getDefaultValues());
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [savedParams, setSavedParams] = useState<ParameterValues | null>(null);
+  const [copyFeedback, setCopyFeedback] = useState(false);
   
   // Check localStorage on mount to show onboarding for first-time visitors
   useEffect(() => {
@@ -223,10 +224,345 @@ This extends the timeline for AI disruption by 10-20 years. Humans have more tim
   const modelOutputs = useMemo(() => runModel(params), [params]);
   
   // Calculate sensitivity analysis
-  const sensitivityAnalysis = useMemo(() => 
+  const sensitivityAnalysis = useMemo(() =>
     calculateSensitivities(params, params.year), [params]);
-  
+
   const targetProjection = modelOutputs.projections.find(p => p.year === params.year);
+
+  // Generate clipboard text with model context and ALL yearly outputs
+  const generateClipboardText = () => {
+    if (!targetProjection) return '';
+
+    const formatHours = (n: number): string => {
+      if (n >= 1e12) return `${(n / 1e12).toFixed(2)} trillion`;
+      if (n >= 1e9) return `${(n / 1e9).toFixed(2)} billion`;
+      if (n >= 1e6) return `${(n / 1e6).toFixed(1)} million`;
+      return `${(n / 1e3).toFixed(1)} thousand`;
+    };
+
+    const formatCurrency = (n: number): string => {
+      if (n >= 1) return `$${n.toFixed(2)}`;
+      if (n >= 0.01) return `$${n.toFixed(2)}`;
+      if (n >= 0.0001) return `$${n.toFixed(4)}`;
+      return `$${n.toExponential(2)}`;
+    };
+
+    const formatNum = (n: number): string => {
+      if (n >= 1e12) return `${(n / 1e12).toFixed(2)}T`;
+      if (n >= 1e9) return `${(n / 1e9).toFixed(2)}B`;
+      if (n >= 1e6) return `${(n / 1e6).toFixed(2)}M`;
+      if (n >= 1e3) return `${(n / 1e3).toFixed(2)}K`;
+      return n.toFixed(2);
+    };
+
+    const baseline2024 = modelOutputs.projections.find(p => p.year === 2024);
+    const baselineHumanHours = baseline2024?.totalHumanHours ?? targetProjection.totalHumanHours;
+
+    // Build baseline wage lookup
+    const baselineWageByTier: Record<string, number> = {};
+    baseline2024?.tierAllocations.forEach(ta => {
+      baselineWageByTier[ta.tier.id] = ta.tierWage;
+    });
+
+    // Yearly summary table
+    const yearlySummary = modelOutputs.projections.map(p => {
+      const empPct = ((p.totalHumanHours / baselineHumanHours) * 100).toFixed(1);
+      return `${p.year}\t${formatHours(p.totalCognitiveWorkHours)}\t${(p.aiTaskShare * 100).toFixed(1)}%\t${(p.humanTaskShare * 100).toFixed(1)}%\t${empPct}%\t${formatCurrency(p.humanWageEquilibrium)}\t${(p.averageSubstitutability * 100).toFixed(0)}%\t${p.primaryBindingConstraint}`;
+    }).join('\n');
+
+    // Compute supply time series
+    const computeTimeSeries = modelOutputs.projections.map(p =>
+      `${p.year}\t${formatNum(p.totalComputeFlops)} FLOP/s\t${formatNum(p.effectiveComputeFlops)} eff\t${formatCurrency(p.computeCostPerExaflop)}/exaFLOP\t${(p.computeUtilization * 100).toFixed(1)}%`
+    ).join('\n');
+
+    // Per-tier time series
+    const tierNames = modelOutputs.tiers.map(t => t.name);
+    const tierHeader = `Year\t${tierNames.join('\t')}`;
+
+    const sigmaTimeSeries = modelOutputs.projections.map(p => {
+      const vals = p.tierAllocations.map(ta => `${(ta.effectiveSubstitutability * 100).toFixed(0)}%`);
+      return `${p.year}\t${vals.join('\t')}`;
+    }).join('\n');
+
+    const aiShareTimeSeries = modelOutputs.projections.map(p => {
+      const vals = p.tierAllocations.map(ta => `${(ta.aiShare * 100).toFixed(1)}%`);
+      return `${p.year}\t${vals.join('\t')}`;
+    }).join('\n');
+
+    const humanShareTimeSeries = modelOutputs.projections.map(p => {
+      const vals = p.tierAllocations.map(ta => `${(ta.humanShare * 100).toFixed(1)}%`);
+      return `${p.year}\t${vals.join('\t')}`;
+    }).join('\n');
+
+    const wageTimeSeries = modelOutputs.projections.map(p => {
+      const vals = p.tierAllocations.map(ta => formatCurrency(ta.tierWage));
+      return `${p.year}\t${vals.join('\t')}`;
+    }).join('\n');
+
+    const aiCostTimeSeries = modelOutputs.projections.map(p => {
+      const vals = p.tierAllocations.map(ta => formatCurrency(ta.aiCostPerHour));
+      return `${p.year}\t${vals.join('\t')}`;
+    }).join('\n');
+
+    const fteTimeSeries = modelOutputs.projections.map(p => {
+      const vals = p.tierAllocations.map(ta => {
+        const fte = ta.hoursHuman / 2000;
+        return fte >= 1e9 ? `${(fte/1e9).toFixed(2)}B` : fte >= 1e6 ? `${(fte/1e6).toFixed(1)}M` : `${(fte/1e3).toFixed(0)}K`;
+      });
+      return `${p.year}\t${vals.join('\t')}`;
+    }).join('\n');
+
+    const constraintTimeSeries = modelOutputs.projections.map(p => {
+      const vals = p.tierAllocations.map(ta => ta.bindingConstraint);
+      return `${p.year}\t${vals.join('\t')}`;
+    }).join('\n');
+
+    // Employment trajectory
+    const employmentTimeSeries = modelOutputs.projections.map(p => {
+      const pct = ((p.totalHumanHours / baselineHumanHours) * 100).toFixed(1);
+      const totalFtes = p.totalHumanHours / 2000;
+      const fteStr = totalFtes >= 1e9 ? `${(totalFtes/1e9).toFixed(2)}B` : `${(totalFtes/1e6).toFixed(0)}M`;
+      return `${p.year}\t${pct}%\t${fteStr} FTEs\t${formatCurrency(p.humanWageEquilibrium)}/hr`;
+    }).join('\n');
+
+    // Detailed yearly projections
+    const yearlyDetails = modelOutputs.projections.map(p => {
+      const tierDetails = p.tierAllocations.map(ta => {
+        const baseWage = baselineWageByTier[ta.tier.id] ?? ta.tierWage;
+        const wageChg = ((ta.tierWage - baseWage) / baseWage) * 100;
+        const fte = ta.hoursHuman / 2000;
+        const fteStr = fte >= 1e9 ? `${(fte/1e9).toFixed(2)}B` : fte >= 1e6 ? `${(fte/1e6).toFixed(1)}M` : `${(fte/1e3).toFixed(0)}K`;
+        return `    ${ta.tier.name}: Human=${(ta.humanShare*100).toFixed(1)}%, AI=${(ta.aiShare*100).toFixed(1)}%, σ=${(ta.effectiveSubstitutability*100).toFixed(0)}%, Wage=${formatCurrency(ta.tierWage)} (${wageChg>=0?'+':''}${wageChg.toFixed(0)}%), AI_Cost=${formatCurrency(ta.aiCostPerHour)}, FTEs=${fteStr}, Constraint=${ta.bindingConstraint}`;
+      }).join('\n');
+
+      return `### ${p.year}
+- Demand: ${formatHours(p.totalCognitiveWorkHours)} hrs (+${(p.demandGrowthFromBaseline*100).toFixed(0)}% vs 2024)
+  - Baseline: ×${p.demandComponents.baseline.toFixed(3)}, AI-induced: ×${p.demandComponents.aiInduced.toFixed(3)}, New tasks: ×${p.demandComponents.newTasks.toFixed(3)}
+- AI: ${formatHours(p.totalAIHours)} hrs (${(p.aiTaskShare*100).toFixed(1)}%)
+- Human: ${formatHours(p.totalHumanHours)} hrs (${(p.humanTaskShare*100).toFixed(1)}%)
+- Employment vs 2024: ${((p.totalHumanHours/baselineHumanHours)*100).toFixed(1)}%
+- Unmet: ${formatHours(p.totalUnmetHours)} hrs (${(p.unmetTaskShare*100).toFixed(1)}%)
+- Avg Wage: ${formatCurrency(p.humanWageEquilibrium)}/hr
+- Avg σ: ${(p.averageSubstitutability*100).toFixed(1)}%
+- Compute: ${formatNum(p.effectiveComputeFlops)} eff FLOP/s @ ${formatCurrency(p.computeCostPerExaflop)}/exaFLOP
+- Utilization: ${(p.computeUtilization*100).toFixed(1)}%, Scarcity: ${p.scarcityPremium.toFixed(2)}×
+- Primary Constraint: ${p.primaryBindingConstraint}
+- Tiers:
+${tierDetails}`;
+    }).join('\n\n');
+
+    // Selected year detailed table
+    const selectedYearTable = (() => {
+      const p = targetProjection;
+      const rows = p.tierAllocations.map(ta => {
+        const baseWage = baselineWageByTier[ta.tier.id] ?? ta.tierWage;
+        const wageChg = ((ta.tierWage - baseWage) / baseWage) * 100;
+        const fte = ta.hoursHuman / 2000;
+        const fteStr = fte >= 1e9 ? `${(fte/1e9).toFixed(2)}B` : fte >= 1e6 ? `${(fte/1e6).toFixed(1)}M` : `${(fte/1e3).toFixed(0)}K`;
+        return `| ${ta.tier.name} | ${(ta.humanShare*100).toFixed(0)}% | ${(ta.aiShare*100).toFixed(0)}% | ${(ta.effectiveSubstitutability*100).toFixed(0)}% | ${formatCurrency(ta.tierWage)} (${wageChg>=0?'+':''}${wageChg.toFixed(0)}%) | ${formatCurrency(ta.aiCostPerHour)} | ${fteStr} | ${ta.bindingConstraint} |`;
+      }).join('\n');
+      return rows;
+    })();
+
+    return `# AI Labour Displacement Calculator - Full Model Output
+
+## About This Model
+
+This is output from an interactive economic simulator that explores how AI automation might affect human wages and employment over time. The model considers:
+
+1. **Supply**: Global AI compute capacity growing over time, multiplied by algorithmic efficiency gains
+2. **Demand**: Cognitive work split into 5 difficulty tiers (Routine, Standard, Complex, Expert, Frontier), each with different AI costs and substitutability limits
+3. **Substitutability (σ)**: A limit on how much AI can replace humans for each task tier, even when AI is cheaper. This captures regulatory, social, and technical barriers to full automation.
+
+The model finds equilibrium wages where labor supply meets demand, accounting for constraints like compute scarcity, AI costs, substitutability limits, and human workforce capacity.
+
+### Key Debate
+- **Optimistic view**: Even if AI is cheaper per task, compute scarcity and substitutability limits may preserve human labor value
+- **Pessimistic view**: If AI costs fall faster than compute grows and substitutability approaches 100%, human labor could lose most economic value
+
+### Task Tiers
+${modelOutputs.tiers.map(t => `- **${t.name}**: ${t.description} (${(t.shareOfCognitive*100).toFixed(0)}% of work, 10^${t.flopsPerHourExponent} FLOPs/hr, ${(t.humanCapable*100).toFixed(0)}% capable, ${t.wageMultiplier}× wage)`).join('\n')}
+
+---
+
+## Parameters Used
+
+### Compute Supply
+- Base Compute (2024): 10^${params.baseComputeExponent} FLOP/s
+- Growth Rate: ${(params.computeGrowthRate*100).toFixed(0)}%/yr (decay ${(params.computeGrowthDecay*100).toFixed(0)}%/yr)
+- Efficiency Gain: ${params.efficiencyImprovement}×/yr (decay ${(params.efficiencyDecay*100).toFixed(0)}%/yr)
+
+### Costs
+- AI Cost (2024): $${params.baseComputeCost}/exaFLOP
+- Cost Decline: ${(params.costDeclineRate*100).toFixed(0)}%/yr (decay ${(params.costDeclineDecay*100).toFixed(0)}%/yr)
+- Human Wage Floor: $${params.humanWageFloor}/hr
+
+### Demand
+- Baseline Growth: ${(params.baselineDemandGrowth*100).toFixed(1)}%/yr
+- Demand Elasticity: ${params.demandElasticity}
+- New Task Creation: ${params.newTaskCreationRate}
+- Cognitive Share: ${(params.cognitiveShare*100).toFixed(0)}%
+
+### Per-Tier Substitutability (σ)
+${modelOutputs.tiers.map(t => `- ${t.name}: ${(t.initialSigma*100).toFixed(0)}%→${(t.maxSigma*100).toFixed(0)}% max, midpoint ${t.sigmaMidpoint}, steepness ${t.sigmaSteepness}, lag ${t.deploymentLag}yr`).join('\n')}
+
+---
+
+## Model Formulas
+
+### Substitutability (σ) - S-Curve
+σ(year) = σ_initial + (σ_max - σ_initial) / (1 + e^(-steepness × (year - lag - midpoint)))
+
+Where deployment lag separates "AI can do it" from "AI is doing it".
+
+### Compute Supply
+compute(year) = baseCompute × ∏[y=0 to years](1 + growthRate × (1 - growthDecay)^y)
+
+With decay, growth slows over time: Year 1 = 100%, Year 10 ≈ 60%, Year 20 ≈ 36% (at 5% decay).
+
+### Effective Compute (with efficiency gains)
+effective(year) = rawCompute × ∏[y=0 to years](efficiencyGain^((1 - efficiencyDecay)^y))
+
+Algorithmic improvements multiply raw compute capacity.
+
+### AI Cost Decline
+cost(year) = baseCost × ∏[y=0 to years](1 - declineRate × (1 - costDecay)^y)
+
+### Demand Elasticity (Jevons Effect)
+For each tier: demandMultiplier = 1 + elasticity × σ × log₁₀(1 / costReductionFactor)
+
+Uses log-based elasticity that accelerates as AI gets very cheap.
+
+### New Task Creation
+newTaskMultiplier = 1 + newTaskRate × σ_growth
+
+New work categories emerge as AI capabilities (σ) increase.
+
+### Total Demand per Tier
+tierDemand = baseTierHours × baselineGrowth × aiInducedMultiplier × newTaskMultiplier
+
+### AI Cost per Hour
+aiCostPerHour = (marketPricePerFLOP) × (10^tierFlopsExponent / efficiencyMultiplier)
+
+Market price includes scarcity premium when demand exceeds supply.
+
+### Wage Equilibrium
+- Labor tightness = demand / effectiveSupply
+- If tightness ≥ 1 (shortage): wage = baseWage × tightness^wageElasticity
+- If tightness < 1 (surplus): wage = baseWage × (0.5 + 0.5 × tightness)
+- Bounded by: wageFloor ≤ wage ≤ taskValue
+
+Displaced workers from higher tiers flow down, increasing supply in lower tiers.
+
+### Task Allocation Logic
+1. Compute market clears via uniform-price auction (highest bidders served first)
+2. Each tier bids reservationPrice = min(wage, taskValue) / flopsPerHour
+3. AI takes work up to σ limit where cost-effective
+4. Humans fill remainder up to workforce capacity
+5. Unmet demand = work that neither AI nor humans can do
+
+### Key Constants
+- Global workforce (2024): 3.4 billion
+- Avg hours/worker/year: 1,800
+- Cognitive work share: 40% (configurable)
+- AI utilization of compute: 30% (rest goes to training, non-cognitive inference)
+- Seconds per year: 31,557,600
+
+---
+
+## Summary Stats
+- Crossover Year (AI < human cost avg): ${modelOutputs.summary.crossoverYear ?? 'Not by 2050'}
+- Compute Sufficiency Year: ${modelOutputs.summary.computeSufficiencyYear ?? 'After 2050'}
+- Final AI Share (2050): ${(modelOutputs.summary.finalAiShare*100).toFixed(1)}%
+- Final Human Wage (2050): ${formatCurrency(modelOutputs.summary.finalHumanWage)}/hr
+
+---
+
+## TIME SERIES DATA
+
+### Yearly Summary
+Year\tDemand\tAI%\tHuman%\tEmployment\tAvgWage\tAvgσ\tConstraint
+${yearlySummary}
+
+### Employment Over Time
+Year\tEmployment vs 2024\tTotal FTEs\tAvg Wage
+${employmentTimeSeries}
+
+### Compute Supply Over Time
+Year\tRaw Compute\tEffective\tCost\tUtilization
+${computeTimeSeries}
+
+### Substitutability (σ) by Tier
+${tierHeader}
+${sigmaTimeSeries}
+
+### AI Share by Tier
+${tierHeader}
+${aiShareTimeSeries}
+
+### Human Share by Tier
+${tierHeader}
+${humanShareTimeSeries}
+
+### Human Wages by Tier ($/hr)
+${tierHeader}
+${wageTimeSeries}
+
+### AI Cost by Tier ($/hr)
+${tierHeader}
+${aiCostTimeSeries}
+
+### Human FTEs by Tier
+${tierHeader}
+${fteTimeSeries}
+
+### Binding Constraint by Tier
+${tierHeader}
+${constraintTimeSeries}
+
+---
+
+## DETAILED YEARLY PROJECTIONS
+
+${yearlyDetails}
+
+---
+
+## SELECTED YEAR: ${params.year}
+
+### Key Metrics
+- Total Demand: ${formatHours(targetProjection.totalCognitiveWorkHours)} hrs/yr (+${(targetProjection.demandGrowthFromBaseline*100).toFixed(0)}% vs 2024)
+- AI Work: ${formatHours(targetProjection.totalAIHours)} hrs/yr (${(targetProjection.aiTaskShare*100).toFixed(1)}%)
+- Human Work: ${formatHours(targetProjection.totalHumanHours)} hrs/yr (${(targetProjection.humanTaskShare*100).toFixed(1)}%)
+- Employment vs 2024: ${((targetProjection.totalHumanHours/baselineHumanHours)*100).toFixed(1)}%
+- Unmet Demand: ${formatHours(targetProjection.totalUnmetHours)} hrs/yr (${(targetProjection.unmetTaskShare*100).toFixed(1)}%)
+- Avg Wage: ${formatCurrency(targetProjection.humanWageEquilibrium)}/hr
+- Compute: ${formatNum(targetProjection.effectiveComputeFlops)} eff FLOP/s
+- Utilization: ${(targetProjection.computeUtilization*100).toFixed(1)}%
+- Scarcity Premium: ${targetProjection.scarcityPremium.toFixed(2)}×
+- Avg σ: ${(targetProjection.averageSubstitutability*100).toFixed(0)}%
+- Primary Constraint: ${targetProjection.primaryBindingConstraint}
+
+### Tier Breakdown
+| Tier | Human% | AI% | σ | Wage (vs 2024) | AI Cost | FTEs | Constraint |
+|------|--------|-----|---|----------------|---------|------|------------|
+${selectedYearTable}
+
+---
+Generated from: AI Labour Displacement Calculator
+Model explores whether compute limitations preserve human labor value in an age of AI.`;
+  };
+
+  const handleCopyOutput = async () => {
+    const text = generateClipboardText();
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopyFeedback(true);
+      setTimeout(() => setCopyFeedback(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
 
   // Define tabs for the main content area
   const tabs = [
@@ -1591,18 +1927,47 @@ finalWage = min(rawWage, taskValue)`}
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-zinc-100">
-              AI Labour Displacement Calculator <span className="italic font-normal text-zinc-400 text-sm">by Charles Dillon</span>
+              AI Labour Displacement Calculator{' '}
+              <span className="font-normal italic text-sm text-zinc-600">
+                by{' '}
+                <a
+                  href="https://x.com/CharlesD353"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-zinc-400 transition-colors"
+                >
+                  Charles Dillon
+                </a>
+              </span>
             </h1>
             <p className="text-sm text-zinc-500 mt-1">
               Explore how compute and substitutability constraints affect AI/human labour substitution
             </p>
           </div>
-          <button
-            onClick={handleReopenOnboarding}
-            className="px-3 py-1.5 text-xs bg-amber-600/20 hover:bg-amber-600/30 text-amber-400 border border-amber-600/40 rounded-lg transition-colors"
-          >
-            Adjust Assumptions
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleCopyOutput}
+              className="px-3 py-1.5 text-xs bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 border border-indigo-600/40 rounded-lg transition-colors flex items-center gap-1.5"
+            >
+              {copyFeedback ? (
+                <>
+                  <span>✓</span>
+                  <span>Copied!</span>
+                </>
+              ) : (
+                <>
+                  <span>📋</span>
+                  <span>Copy Output to Clipboard</span>
+                </>
+              )}
+            </button>
+            <button
+              onClick={handleReopenOnboarding}
+              className="px-3 py-1.5 text-xs bg-amber-600/20 hover:bg-amber-600/30 text-amber-400 border border-amber-600/40 rounded-lg transition-colors"
+            >
+              Adjust Assumptions
+            </button>
+          </div>
         </div>
       </header>
       
