@@ -408,6 +408,68 @@ ${modelOutputs.tiers.map(t => `- ${t.name}: ${(t.initialSigma*100).toFixed(0)}%�
 
 ---
 
+## Model Formulas
+
+### Substitutability (σ) - S-Curve
+σ(year) = σ_initial + (σ_max - σ_initial) / (1 + e^(-steepness × (year - lag - midpoint)))
+
+Where deployment lag separates "AI can do it" from "AI is doing it".
+
+### Compute Supply
+compute(year) = baseCompute × ∏[y=0 to years](1 + growthRate × (1 - growthDecay)^y)
+
+With decay, growth slows over time: Year 1 = 100%, Year 10 ≈ 60%, Year 20 ≈ 36% (at 5% decay).
+
+### Effective Compute (with efficiency gains)
+effective(year) = rawCompute × ∏[y=0 to years](efficiencyGain^((1 - efficiencyDecay)^y))
+
+Algorithmic improvements multiply raw compute capacity.
+
+### AI Cost Decline
+cost(year) = baseCost × ∏[y=0 to years](1 - declineRate × (1 - costDecay)^y)
+
+### Demand Elasticity (Jevons Effect)
+For each tier: demandMultiplier = 1 + elasticity × σ × log₁₀(1 / costReductionFactor)
+
+Uses log-based elasticity that accelerates as AI gets very cheap.
+
+### New Task Creation
+newTaskMultiplier = 1 + newTaskRate × σ_growth
+
+New work categories emerge as AI capabilities (σ) increase.
+
+### Total Demand per Tier
+tierDemand = baseTierHours × baselineGrowth × aiInducedMultiplier × newTaskMultiplier
+
+### AI Cost per Hour
+aiCostPerHour = (marketPricePerFLOP) × (10^tierFlopsExponent / efficiencyMultiplier)
+
+Market price includes scarcity premium when demand exceeds supply.
+
+### Wage Equilibrium
+- Labor tightness = demand / effectiveSupply
+- If tightness ≥ 1 (shortage): wage = baseWage × tightness^wageElasticity
+- If tightness < 1 (surplus): wage = baseWage × (0.5 + 0.5 × tightness)
+- Bounded by: wageFloor ≤ wage ≤ taskValue
+
+Displaced workers from higher tiers flow down, increasing supply in lower tiers.
+
+### Task Allocation Logic
+1. Compute market clears via uniform-price auction (highest bidders served first)
+2. Each tier bids reservationPrice = min(wage, taskValue) / flopsPerHour
+3. AI takes work up to σ limit where cost-effective
+4. Humans fill remainder up to workforce capacity
+5. Unmet demand = work that neither AI nor humans can do
+
+### Key Constants
+- Global workforce (2024): 3.4 billion
+- Avg hours/worker/year: 1,800
+- Cognitive work share: 40% (configurable)
+- AI utilization of compute: 30% (rest goes to training, non-cognitive inference)
+- Seconds per year: 31,557,600
+
+---
+
 ## Summary Stats
 - Crossover Year (AI < human cost avg): ${modelOutputs.summary.crossoverYear ?? 'Not by 2050'}
 - Compute Sufficiency Year: ${modelOutputs.summary.computeSufficiencyYear ?? 'After 2050'}
