@@ -147,6 +147,7 @@ FRONTIER_CAPABLE: 5%   // Only 5% can do Frontier
 // Workers are allocated from highest skill band first (most flexibility).
 // Routine-only workers (20%) can ONLY work Routine - if that tier is automated,
 // they have no fallback options.
+
 ```
 
 ### References

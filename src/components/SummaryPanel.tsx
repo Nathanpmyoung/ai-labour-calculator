@@ -3,7 +3,6 @@ import type { ModelOutputs } from '../models/computeModel';
 import type { ParameterValues } from '../models/parameters';
 import { TierBreakdownCompact } from './TierBreakdown';
 import { HumanEmploymentCharts } from './HumanEmploymentCharts';
-import { Collapsible } from './Collapsible';
 
 interface SummaryPanelProps {
   outputs: ModelOutputs;
@@ -411,15 +410,11 @@ export function SummaryPanel({ outputs, params }: SummaryPanelProps) {
       
       {/* Human Employment Charts */}
       <div className="mt-6 pt-6 border-t border-zinc-800">
-        <Collapsible 
-          title="Human Employment Over Time" 
-          defaultOpen={false}
-        >
-          <HumanEmploymentCharts 
-            projections={outputs.projections} 
-            targetYear={params.year} 
-          />
-        </Collapsible>
+        <h3 className="text-lg font-medium text-zinc-100 mb-3">Human Employment Over Time</h3>
+        <HumanEmploymentCharts 
+          projections={outputs.projections} 
+          targetYear={params.year} 
+        />
       </div>
     </div>
   );
