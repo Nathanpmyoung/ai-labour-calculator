@@ -104,7 +104,7 @@ This reflects views that AGI is far off, or that even capable AI won't be truste
       name: 'High Substitutability',
       color: 'red',
       description: 'AI rapidly approaches near-perfect substitution across all tiers',
-      explanation: `This scenario assumes AI capabilities advance rapidly and society quickly adopts AI as a near-complete replacement for human cognitive labor. Barriers like trust, regulation, and organizational inertia are overcome within years, not decades.
+      explanation: `This scenario assumes AI capabilities advance rapidly and society quickly adopts AI as a near-complete replacement for human cognitive labour. Barriers like trust, regulation, and organizational inertia are overcome within years, not decades.
 
 Key assumptions:
 • Routine tasks reach 99% substitutability—fully automated with minimal oversight
@@ -112,7 +112,7 @@ Key assumptions:
 • Expert/Frontier tasks reach 85-90%—even research and strategy largely AI-driven
 • Early breakthroughs (2025-2028)—rapid capability gains and adoption
 
-This reflects views that transformative AI is imminent and that economic pressures will drive rapid automation regardless of social preferences. Human labor value could collapse within 10-15 years.`,
+This reflects views that transformative AI is imminent and that economic pressures will drive rapid automation regardless of social preferences. Human labour value could collapse within 10-15 years.`,
       changes: {
         tier_routine_maxSigma: 1,
         tier_standard_maxSigma: 1,
@@ -143,7 +143,7 @@ Key assumptions:
 • Compute growth slowed to 50%/year (vs. 100% default)—supply chain constraints, energy limits
 • Faster growth decay (8%/year)—exponential growth can't continue indefinitely
 
-This makes raw compute capacity the binding constraint rather than cost or substitutability. Even if AI is cheap per FLOP, there simply isn't enough compute to do all the work. Human labor fills the gap.`,
+This makes raw compute capacity the binding constraint rather than cost or substitutability. Even if AI is cheap per FLOP, there simply isn't enough compute to do all the work. Human labour fills the gap.`,
       changes: {
         tier_routine_flops: 18,
         tier_standard_flops: 20,
@@ -159,7 +159,7 @@ This makes raw compute capacity the binding constraint rather than cost or subst
       name: 'High Demand Growth',
       color: 'blue',
       description: 'AI enables lots of new work—total cognitive hours grow substantially',
-      explanation: `This scenario assumes cheap AI dramatically expands what's economically feasible. As AI costs fall, entirely new categories of work emerge—things that weren't worth doing when they required expensive human labor.
+      explanation: `This scenario assumes cheap AI dramatically expands what's economically feasible. As AI costs fall, entirely new categories of work emerge—things that weren't worth doing when they required expensive human labour.
 
 Key assumptions:
 • High demand elasticity (0.6)—strong Jevons paradox effect; cheaper AI → much more AI use
@@ -239,7 +239,7 @@ This extends the timeline for AI disruption by 10-20 years. Humans have more tim
           {/* Hero */}
           <div className="text-center pb-4 border-b border-zinc-800">
             <h2 className="text-2xl font-bold text-zinc-100 mb-2">
-              Will AI Make Human Labor Worthless?
+              Will AI Make Human labour Worthless?
             </h2>
             <p className="text-zinc-400 max-w-2xl mx-auto">
               This calculator lets you explore different scenarios for how AI automation affects human wages and employment over time.
@@ -259,7 +259,7 @@ This extends the timeline for AI disruption by 10-20 years. Humans have more tim
               <p className="text-red-400 mb-2">🔴 Pessimistic View</p>
               <p className="text-sm text-zinc-400">
                 "AI is getting cheaper faster than compute is growing. If substitutability approaches 100%, 
-                human labor could lose most of its economic value."
+                human labour could lose most of its economic value."
               </p>
             </div>
           </div>
@@ -416,7 +416,7 @@ This extends the timeline for AI disruption by 10-20 years. Humans have more tim
             >
               debate between @CharlesD353 and @SebKrier
             </a>
-            {' '}on whether compute limitations will preserve human labor value.
+            {' '}on whether compute limitations will preserve human labour value.
           </p>
         </div>
       ),
@@ -626,9 +626,9 @@ This extends the timeline for AI disruption by 10-20 years. Humans have more tim
               Where Do the Defaults Come From?
             </h3>
             
-            {/* Cognitive Labor Baseline - NEW */}
+            {/* Cognitive labour Baseline - NEW */}
             <div className="bg-indigo-950/30 border border-indigo-900/40 rounded-lg p-4 mb-4">
-              <h4 className="text-sm font-medium text-indigo-300 mb-2">📊 Cognitive Labor Baseline</h4>
+              <h4 className="text-sm font-medium text-indigo-300 mb-2">📊 Cognitive labour Baseline</h4>
               <div className="text-xs text-zinc-400 space-y-1">
                 <div className="flex justify-between border-b border-zinc-800 pb-1">
                   <span>Global workforce</span>
@@ -686,7 +686,7 @@ This extends the timeline for AI disruption by 10-20 years. Humans have more tim
             <div className="bg-amber-950/30 border border-amber-900/40 rounded-lg p-4 mt-4">
               <h4 className="text-sm font-medium text-amber-300 mb-2">⚠️ Hidden Constant: AI Utilization (30%)</h4>
               <p className="text-xs text-zinc-400 mb-2">
-                Only <strong className="text-amber-400">30% of global AI compute</strong> is assumed to go to cognitive work that competes with human labor. 
+                Only <strong className="text-amber-400">30% of global AI compute</strong> is assumed to go to cognitive work that competes with human labour. 
                 The rest goes to:
               </p>
               <ul className="text-xs text-zinc-500 list-disc list-inside ml-1 space-y-1">
@@ -831,7 +831,7 @@ This extends the timeline for AI disruption by 10-20 years. Humans have more tim
             <div className="pt-4 border-t border-zinc-800 mt-4 text-xs text-zinc-500">
               <h4 className="text-zinc-400 font-medium mb-2">Equilibrium Wages — Dynamic Supply/Demand</h4>
               <p className="mb-2">
-                Wages are not fixed multipliers of the floor—they respond to <strong className="text-zinc-300">labor market tightness</strong>:
+                Wages are not fixed multipliers of the floor—they respond to <strong className="text-zinc-300">labour market tightness</strong>:
               </p>
               <div className="bg-zinc-900/50 rounded-lg p-3 border border-zinc-800 mb-2 font-mono text-center">
                 wage = floor × multiplier × tightness<sup>elasticity</sup>
@@ -1046,7 +1046,7 @@ This extends the timeline for AI disruption by 10-20 years. Humans have more tim
                     <li><strong className="text-zinc-300">Frontier 6.0×</strong> = minimum $90/hr</li>
                   </ul>
                   <p className="mt-2 text-zinc-400">
-                    Actual wages may exceed these minimums based on labor market tightness (see below).
+                    Actual wages may exceed these minimums based on labour market tightness (see below).
                   </p>
                 </div>
                 
@@ -1071,11 +1071,11 @@ This extends the timeline for AI disruption by 10-20 years. Humans have more tim
                 <div className="bg-zinc-900/50 rounded-lg p-3 border border-zinc-800">
                   <p className="text-zinc-300 font-medium mb-1">Wage ε <span className="text-zinc-500 font-normal">(unit: elasticity, 0.1-2.0)</span></p>
                   <p>
-                    <strong>Wage elasticity</strong> — how sensitive wages are to labor market tightness.
+                    <strong>Wage elasticity</strong> — how sensitive wages are to labour market tightness.
                     Higher elasticity = wages spike faster when workers are scarce.
                   </p>
                   <ul className="list-disc list-inside mt-2 space-y-1">
-                    <li><strong className="text-zinc-300">Routine 0.3</strong> — large labor pool, wages rise slowly</li>
+                    <li><strong className="text-zinc-300">Routine 0.3</strong> — large labour pool, wages rise slowly</li>
                     <li><strong className="text-zinc-300">Standard 0.5</strong></li>
                     <li><strong className="text-zinc-300">Complex 0.8</strong></li>
                     <li><strong className="text-zinc-300">Expert 1.2</strong></li>
@@ -1455,7 +1455,7 @@ Total Hours = baseHours × baseline × aiInduced × newTasks`}
 {`wages = baseWages (floor × multiplier)
 repeat until wages converge:
   1. Run auction with current wages → get AI allocation
-  2. Calculate labor market:
+  2. Calculate labour market:
      - displaced = AI_share × tier_capacity
      - Flow displaced DOWN to lower tiers
      - Voluntary mobility if lower tier pays > 80% of current
@@ -1541,7 +1541,7 @@ finalWage = min(rawWage, taskValue)`}
             
             <div className="space-y-3 text-sm text-zinc-400">
               <div className="bg-zinc-900/50 rounded-lg p-3 border border-zinc-800">
-                <p className="text-zinc-300 font-medium mb-2">Labor Statistics (2024 baseline)</p>
+                <p className="text-zinc-300 font-medium mb-2">labour Statistics (2024 baseline)</p>
                 <ul className="list-disc list-inside text-xs space-y-1">
                   <li>Global workforce: 3.4B (ILO ILOSTAT 2023)</li>
                   <li>Avg hours/worker/year: ~1,800 (OECD 2023)</li>
@@ -1594,7 +1594,7 @@ finalWage = min(rawWage, taskValue)`}
               AI Labour Displacement Calculator <span className="italic font-normal text-zinc-400 text-sm">by Charles Dillon</span>
             </h1>
             <p className="text-sm text-zinc-500 mt-1">
-              Explore how compute and substitutability constraints affect AI/human labor substitution
+              Explore how compute and substitutability constraints affect AI/human labour substitution
             </p>
           </div>
           <button

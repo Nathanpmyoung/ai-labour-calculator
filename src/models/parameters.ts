@@ -27,12 +27,12 @@ export interface TierConfig {
   sigmaMidpoint: number;  // Year when σ reaches halfway between initial and max (the "breakthrough" year)
   sigmaSteepness: number; // How rapid the transition (1=gradual ~5yr, 3=sharp ~2yr, 5=step-like ~1yr)
   deploymentLag: number;  // Years between "AI can do it" and "AI is doing it" (adoption delay)
-  // Human labor constraints
+  // Human labour constraints
   humanCapable: number;  // Fraction of workforce capable of this tier (0-1)
   wageMultiplier: number; // Multiplier on base wage floor for this tier (minimum wage)
   // Equilibrium wage dynamics
   taskValue: number;     // Max $/hr employers will pay (wage ceiling)
-  wageElasticity: number; // How wages respond to labor market tightness
+  wageElasticity: number; // How wages respond to labour market tightness
   description: string;
 }
 
@@ -79,7 +79,7 @@ export const parameters: Parameter[] = [
   {
     id: 'year',
     label: 'Projection Year',
-    description: 'The year to project compute and labor dynamics to',
+    description: 'The year to project compute and labour dynamics to',
     default: 2030,
     min: 2024,
     max: 2050,
@@ -398,7 +398,7 @@ export const parameters: Parameter[] = [
     {
       id: `tier_${tier.id}_wageElasticity`,
       label: `${tier.name}: Wage ε`,
-      description: `How sensitive wages are to labor market tightness. Higher = wages spike faster when workers scarce.`,
+      description: `How sensitive wages are to labour market tightness. Higher = wages spike faster when workers scarce.`,
       default: tier.wageElasticity,
       min: 0.1,
       max: 2.0,

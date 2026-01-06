@@ -1,14 +1,14 @@
 # AI  Labour Displacement Calculator
 
-An interactive calculator exploring how compute constraints might affect AI/human labor substitution over time.
+An interactive calculator exploring how compute constraints might affect AI/human labour substitution over time.
 
 ## What This Tool Does
 
-The model explores a key question: **Will AI make human labor economically worthless?**
+The model explores a key question: **Will AI make human labour economically worthless?**
 
 Two views frame the debate:
 - **Optimistic:** Compute is limited. Even cheap AI can't do *all* cognitive work. Humans retain valuable niches.
-- **Pessimistic:** AI costs fall faster than compute grows. If substitutability approaches 100%, human labor loses value.
+- **Pessimistic:** AI costs fall faster than compute grows. If substitutability approaches 100%, human labour loses value.
 
 This calculator lets you adjust assumptions and see how they affect human wages, employment, and task allocation across different scenarios.
 
@@ -17,7 +17,7 @@ This calculator lets you adjust assumptions and see how they affect human wages,
 - **Tiered Task Model:** Cognitive work split into 5 difficulty tiers (Routine → Frontier), each with independent parameters
 - **Time-Varying Substitutability:** Per-tier σ that grows from initial value toward an asymptote over time
 - **Dynamic Demand:** Total work grows with GDP, AI-induced demand (Jevons paradox), and new task creation
-- **Skill-Stratified Labor:** Workers have skill ceilings—they can only work at or below their skill level. Routine-only workers can't do Expert tasks even if Expert pays more.
+- **Skill-Stratified labour:** Workers have skill ceilings—they can only work at or below their skill level. Routine-only workers can't do Expert tasks even if Expert pays more.
 - **Equilibrium Wages:** Market-clearing wages per tier based on supply/demand with inter-tier mobility
 - **Market-Clearing Allocation:** Uniform-price auction allocates scarce compute to highest bidders
 
@@ -108,7 +108,7 @@ See [RESEARCH_DATA.md](./RESEARCH_DATA.md) for sources.
 Key sources:
 - **Compute:** Epoch AI estimates of global AI inference capacity
 - **Efficiency:** ~2x/year algorithmic improvement (Epoch AI)
-- **Labor:** ILO global workforce statistics, OECD cognitive labor share, McKinsey task automation studies
+- **labour:** ILO global workforce statistics, OECD cognitive labour share, McKinsey task automation studies
 - **Costs:** NVIDIA/cloud provider pricing (2024)
 
 ## Limitations
@@ -117,7 +117,7 @@ This is a simplified model for exploring intuitions, not a precise forecast:
 
 - Extrapolates compute growth (actual growth depends on energy, supply chains, investment)
 - Substitutability trajectories are speculative—we don't know how fast AI will become "good enough"
-- Ignores physical labor, regulation, preferences for human services
+- Ignores physical labour, regulation, preferences for human services
 - Doesn't model transition dynamics or geographic variation
 - Assumes rational economic allocation (reality is messier)
 
@@ -134,4 +134,4 @@ AGPL-3.0 — see [LICENSE](./LICENSE)
 
 ## Context
 
-Inspired by a [discussion between @CharlesD353 and @SebKrier](https://x.com/CharlesD353/status/2005592245232452079) on whether compute limitations will preserve human labor value.
+Inspired by a [discussion between @CharlesD353 and @SebKrier](https://x.com/CharlesD353/status/2005592245232452079) on whether compute limitations will preserve human labour value.

@@ -42,11 +42,11 @@ export const BASELINE_DATA = {
     '400B params': 1e12,
   },
   
-  // Global labor market
+  // Global labour market
   globalWorkforce: 3.5e9,              // 3.5 billion workers
   averageWorkHoursPerYear: 1900,       // OECD average
   totalGlobalWorkHours: 3e11,          // ~300 billion hours/year
-  globalLaborIncome: 80e12,            // ~$80 trillion/year
+  globallabourIncome: 80e12,            // ~$80 trillion/year
   averageGlobalWage: 22,               // ~$22/hour weighted average
   
   // Task breakdown (rough estimates)

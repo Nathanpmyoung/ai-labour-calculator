@@ -53,16 +53,16 @@ This document contains the researched baseline data used in the calculator.
 
 Note: Actual inference FLOPs = ~2 × parameters × tokens (approximate)
 
-### Demand Side - Human Labor
+### Demand Side - Human labour
 
-#### Global Labor Statistics
+#### Global labour Statistics
 
 | Metric | Value | Source |
 |--------|-------|--------|
 | Global workforce | ~3.5 billion people | ILO |
 | Average work hours/year | ~1,800-2,000 | OECD average |
 | Total global work hours | ~300-350 billion hours/year | Derived |
-| Global labor income | ~$80 trillion/year | World Bank estimates |
+| Global labour income | ~$80 trillion/year | World Bank estimates |
 | Average global wage | ~$20-25/hour (weighted) | High variance by region |
 
 #### Task Breakdown (Rough Estimates)
@@ -124,13 +124,13 @@ BASELINE_DEMAND_GROWTH = 0.03      // 3%/year
 DEMAND_ELASTICITY = 0.5            // Log-based Jevons coefficient
 NEW_TASK_CREATION_RATE = 0.5       // 50% of σ growth → new work (plateaus when σ plateaus)
 
-// Labor (ILO/McKinsey)
+// labour (ILO/McKinsey)
 GLOBAL_WORKFORCE = 3.4e9           // 3.4 billion workers
 HOURS_PER_WORKER = 1800            // ~1,800 hours/year
 COGNITIVE_SHARE = 0.40             // 40% of work is cognitive
 // → ~2.4 trillion cognitive hours/year (global human capacity constraint)
 
-// Skill-stratified labor supply (cumulative % who can do this tier OR HIGHER)
+// Skill-stratified labour supply (cumulative % who can do this tier OR HIGHER)
 ROUTINE_CAPABLE:  100% // Everyone in cognitive workforce can do Routine
 STANDARD_CAPABLE: 80%  // 80% can do Standard or higher
 COMPLEX_CAPABLE:  50%  // 50% can do Complex or higher
@@ -155,7 +155,7 @@ FRONTIER_CAPABLE: 5%   // Only 5% can do Frontier
 1. **Epoch AI** - "Compute Trends Across Three Eras of Machine Learning" - Historical compute growth data
 2. **Semianalysis** - "AI Datacenter Energy Dilemma" - Infrastructure constraints
 3. **NVIDIA Financial Reports** - GPU shipment data
-4. **ILO Global Employment Trends** - Labor force statistics
+4. **ILO Global Employment Trends** - labour force statistics
 5. **OpenAI/Anthropic Pricing Pages** - Current model costs (Dec 2024)
 6. **Various academic papers** - Algorithmic efficiency improvements
 

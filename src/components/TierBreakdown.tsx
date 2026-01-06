@@ -104,13 +104,13 @@ export function TierBreakdown({ tierAllocations, year }: TierBreakdownProps) {
               </div>
               <div>
                 <span className="text-zinc-500 block">Tightness</span>
-                <span className={`${ta.laborTightness > 1.2 ? 'text-amber-400' : ta.laborTightness < 0.8 ? 'text-blue-400' : 'text-zinc-300'}`}>
-                  {ta.laborTightness.toFixed(2)}×
+                <span className={`${ta.labourTightness > 1.2 ? 'text-amber-400' : ta.labourTightness < 0.8 ? 'text-blue-400' : 'text-zinc-300'}`}>
+                  {ta.labourTightness.toFixed(2)}×
                 </span>
               </div>
             </div>
             
-            {/* Stats grid - labor */}
+            {/* Stats grid - labour */}
             <div className="grid grid-cols-4 gap-2 text-xs">
               <div title="σ = substitutability (0=can't replace, 1=perfect substitute)">
                 <span className="text-zinc-500 block">σ (sub)</span>

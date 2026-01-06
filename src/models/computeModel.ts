@@ -148,7 +148,7 @@ export interface TierAllocation {
   reservationPrice: number;    // Max $/FLOP this tier would pay (willingness to pay)
   // Equilibrium wage dynamics
   effectiveSupply: number;     // Base capacity + displaced workers from above
-  laborTightness: number;      // Demand / effective supply ratio
+  labourTightness: number;      // Demand / effective supply ratio
   displacedInflow: number;     // Hours of workers displaced from higher tiers
   wageAtCeiling: boolean;      // True if wage hit task value ceiling
 }
@@ -461,7 +461,7 @@ function calculateSkillBands(tiers: TaskTier[], totalWorkforceHours: number): Sk
 interface TierEquilibriumResult {
   equilibriumWage: number;      // Final wage after supply/demand equilibrium
   effectiveSupply: number;      // Base capacity + displaced from above
-  laborTightness: number;       // Demand / effective supply
+  labourTightness: number;       // Demand / effective supply
   displacedInflow: number;      // Workers displaced from higher tiers
   wageAtCeiling: boolean;       // True if wage hit task value ceiling
 }
@@ -543,7 +543,7 @@ function calculateEquilibriumWages(
     return {
       equilibriumWage: wages[i],
       effectiveSupply: effectiveSupply[i],
-      laborTightness: tightness,
+      labourTightness: tightness,
       displacedInflow: displacedInflow[i],
       wageAtCeiling: wages[i] >= tier.taskValue * 0.99,
     };
@@ -853,7 +853,7 @@ function allocateComputeOptimally(
       humanCapacityHours: tv.humanCapacityHours,
       reservationPrice: tv.reservationPricePerFLOP,
       effectiveSupply: tv.humanCapacityHours,
-      laborTightness: 1.0,
+      labourTightness: 1.0,
       displacedInflow: 0,
       wageAtCeiling: false,
     };
@@ -882,7 +882,7 @@ function applyEquilibriumToAllocations(
     // Update equilibrium wage diagnostics
     ta.tierWage = eq.equilibriumWage;
     ta.effectiveSupply = eq.effectiveSupply;
-    ta.laborTightness = eq.laborTightness;
+    ta.labourTightness = eq.labourTightness;
     ta.displacedInflow = eq.displacedInflow;
     ta.wageAtCeiling = eq.wageAtCeiling;
 

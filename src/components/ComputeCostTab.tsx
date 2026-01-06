@@ -322,7 +322,7 @@ export function ComputeCostTab({ projection, params }: ComputeCostTabProps) {
             lowest bid up to their σ limit. The marginal tier sets the market-clearing price; lower bidders are priced out.
           </p>
           <p>
-            <span className="text-indigo-300">Wages and compute interact:</span> Wages rise when human labor is scarce,
+            <span className="text-indigo-300">Wages and compute interact:</span> Wages rise when human labour is scarce,
             which raises bids for compute. The model iterates wages and compute allocation until they stabilize.
           </p>
           <p>
