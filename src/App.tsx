@@ -23,6 +23,7 @@ function App() {
   const [params, setParams] = useState<ParameterValues>(getDefaultValues());
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [savedParams, setSavedParams] = useState<ParameterValues | null>(null);
+  const [copyFeedback, setCopyFeedback] = useState(false);
   
   // Check localStorage on mount to show onboarding for first-time visitors
   useEffect(() => {
@@ -223,10 +224,115 @@ This extends the timeline for AI disruption by 10-20 years. Humans have more tim
   const modelOutputs = useMemo(() => runModel(params), [params]);
   
   // Calculate sensitivity analysis
-  const sensitivityAnalysis = useMemo(() => 
+  const sensitivityAnalysis = useMemo(() =>
     calculateSensitivities(params, params.year), [params]);
-  
+
   const targetProjection = modelOutputs.projections.find(p => p.year === params.year);
+
+  // Generate clipboard text with model context and current outputs
+  const generateClipboardText = () => {
+    if (!targetProjection) return '';
+
+    const formatHours = (n: number): string => {
+      if (n >= 1e12) return `${(n / 1e12).toFixed(2)} trillion`;
+      if (n >= 1e9) return `${(n / 1e9).toFixed(2)} billion`;
+      if (n >= 1e6) return `${(n / 1e6).toFixed(1)} million`;
+      return `${(n / 1e3).toFixed(1)} thousand`;
+    };
+
+    const formatCurrency = (n: number): string => {
+      if (n >= 1) return `$${n.toFixed(2)}`;
+      if (n >= 0.01) return `$${n.toFixed(2)}`;
+      if (n >= 0.0001) return `$${n.toFixed(4)}`;
+      return `$${n.toExponential(1)}`;
+    };
+
+    const baseline2024 = modelOutputs.projections.find(p => p.year === 2024);
+    const baselineHumanHours = baseline2024?.totalHumanHours ?? targetProjection.totalHumanHours;
+    const humanHoursChange = ((targetProjection.totalHumanHours - baselineHumanHours) / baselineHumanHours) * 100;
+    const baselineAvgWage = baseline2024?.humanWageEquilibrium ?? targetProjection.humanWageEquilibrium;
+    const avgWageChange = ((targetProjection.humanWageEquilibrium - baselineAvgWage) / baselineAvgWage) * 100;
+
+    // Build baseline wage lookup
+    const baselineWageByTier: Record<string, number> = {};
+    baseline2024?.tierAllocations.forEach(ta => {
+      baselineWageByTier[ta.tier.id] = ta.tierWage;
+    });
+
+    const tierBreakdown = targetProjection.tierAllocations.map(ta => {
+      const baselineWage = baselineWageByTier[ta.tier.id] ?? ta.tierWage;
+      const wageChange = ((ta.tierWage - baselineWage) / baselineWage) * 100;
+      const ftes = ta.hoursHuman / 2000;
+      return `  - ${ta.tier.name}: Human share ${(ta.humanShare * 100).toFixed(0)}%, Wage ${formatCurrency(ta.tierWage)}/hr (${wageChange >= 0 ? '+' : ''}${wageChange.toFixed(0)}% vs 2024), AI cost ${formatCurrency(ta.aiCostPerHour)}/hr, ${ftes >= 1e6 ? `${(ftes/1e6).toFixed(1)}M` : `${(ftes/1e3).toFixed(0)}K`} FTEs`;
+    }).join('\n');
+
+    return `# AI Labour Displacement Calculator - Model Output
+
+## About This Model
+
+This is output from an interactive economic simulator that explores how AI automation might affect human wages and employment over time. The model considers:
+
+1. **Supply**: Global AI compute capacity growing over time, multiplied by algorithmic efficiency gains
+2. **Demand**: Cognitive work split into 5 difficulty tiers (Routine, Standard, Complex, Expert, Frontier), each with different AI costs and substitutability limits
+3. **Substitutability (σ)**: A limit on how much AI can replace humans for each task tier, even when AI is cheaper. This captures regulatory, social, and technical barriers to full automation.
+
+The model finds equilibrium wages where labor supply meets demand, accounting for constraints like compute scarcity, AI costs, substitutability limits, and human workforce capacity.
+
+Key debate this model explores:
+- **Optimistic view**: Even if AI is cheaper per task, compute scarcity and substitutability limits may preserve human labor value
+- **Pessimistic view**: If AI costs fall faster than compute grows and substitutability approaches 100%, human labor could lose most economic value
+
+## Current Projection: Year ${params.year}
+
+### Key Metrics
+
+- **Total Cognitive Work Demand**: ${formatHours(targetProjection.totalCognitiveWorkHours)} hours/year (+${(targetProjection.demandGrowthFromBaseline * 100).toFixed(0)}% vs 2024)
+  - Baseline GDP growth: ×${targetProjection.demandComponents.baseline.toFixed(2)}
+  - AI-induced demand (Jevons effect): ×${targetProjection.demandComponents.aiInduced.toFixed(2)}
+  - New task creation: ×${targetProjection.demandComponents.newTasks.toFixed(2)}
+
+- **AI Work Done**: ${formatHours(targetProjection.totalAIHours)} hours/year (${(targetProjection.aiTaskShare * 100).toFixed(1)}% of total)
+- **Human Work Done**: ${formatHours(targetProjection.totalHumanHours)} hours/year (${(targetProjection.humanTaskShare * 100).toFixed(1)}% of total)
+- **Human Employment vs 2024**: ${((targetProjection.totalHumanHours / baselineHumanHours) * 100).toFixed(0)}% (${humanHoursChange >= 0 ? '+' : ''}${humanHoursChange.toFixed(0)}% change)
+- **Average Human Wage**: ${formatCurrency(targetProjection.humanWageEquilibrium)}/hr (${avgWageChange >= 0 ? '+' : ''}${avgWageChange.toFixed(0)}% vs 2024)
+- **Unmet Demand**: ${(targetProjection.unmetTaskShare * 100).toFixed(1)}% of work couldn't be done
+- **Compute Utilization**: ${(targetProjection.computeUtilization * 100).toFixed(1)}%
+- **Average Substitutability (σ)**: ${(targetProjection.averageSubstitutability * 100).toFixed(0)}%
+- **Primary Binding Constraint**: ${targetProjection.primaryBindingConstraint === 'compute' ? 'Compute Scarcity' : targetProjection.primaryBindingConstraint === 'cost' ? 'AI Cost' : targetProjection.primaryBindingConstraint === 'humanCapacity' ? 'Human Capacity' : 'Substitutability Limit'}
+
+### Employment & Wages by Task Tier
+
+${tierBreakdown}
+
+### Key Parameters Used
+
+- Base AI Compute (2024): 10^${params.baseComputeExponent} FLOP/s
+- Compute Growth Rate: ${(params.computeGrowthRate * 100).toFixed(0)}%/year
+- AI Cost (2024): $${params.baseComputeCost}/exaFLOP
+- Cost Decline Rate: ${(params.costDeclineRate * 100).toFixed(0)}%/year
+- Human Wage Floor: $${params.humanWageFloor}/hr
+- Demand Elasticity: ${params.demandElasticity}
+- New Task Creation Rate: ${params.newTaskCreationRate}
+
+### Task Tier Substitutability Settings (σ)
+
+${modelOutputs.tiers.map(t => `- ${t.name}: ${(t.initialSigma * 100).toFixed(0)}% → ${(t.maxSigma * 100).toFixed(0)}% max, breakthrough year ~${t.sigmaMidpoint}`).join('\n')}
+
+---
+Generated from: AI Labour Displacement Calculator
+This model was built to explore debates about whether compute limitations will preserve human labor value in an age of AI.`;
+  };
+
+  const handleCopyOutput = async () => {
+    const text = generateClipboardText();
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopyFeedback(true);
+      setTimeout(() => setCopyFeedback(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
 
   // Define tabs for the main content area
   const tabs = [
@@ -1597,12 +1703,30 @@ finalWage = min(rawWage, taskValue)`}
               Explore how compute and substitutability constraints affect AI/human labour substitution
             </p>
           </div>
-          <button
-            onClick={handleReopenOnboarding}
-            className="px-3 py-1.5 text-xs bg-amber-600/20 hover:bg-amber-600/30 text-amber-400 border border-amber-600/40 rounded-lg transition-colors"
-          >
-            Adjust Assumptions
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleCopyOutput}
+              className="px-3 py-1.5 text-xs bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 border border-indigo-600/40 rounded-lg transition-colors flex items-center gap-1.5"
+            >
+              {copyFeedback ? (
+                <>
+                  <span>✓</span>
+                  <span>Copied!</span>
+                </>
+              ) : (
+                <>
+                  <span>📋</span>
+                  <span>Copy Output to Clipboard</span>
+                </>
+              )}
+            </button>
+            <button
+              onClick={handleReopenOnboarding}
+              className="px-3 py-1.5 text-xs bg-amber-600/20 hover:bg-amber-600/30 text-amber-400 border border-amber-600/40 rounded-lg transition-colors"
+            >
+              Adjust Assumptions
+            </button>
+          </div>
         </div>
       </header>
       
